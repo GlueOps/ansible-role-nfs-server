@@ -28,6 +28,11 @@ if ! command -v hcloud &> /dev/null; then
   echo "hcloud $(hcloud version) installed"
 fi
 
+echo "=== Nuking existing Hetzner resources ==="
+docker run --rm -e HCLOUD_TOKEN="$HCLOUD_TOKEN" \
+  -v "$(cd "$(dirname "$0")" && pwd)/hetzner-nuke-config.yml:/config.yaml:ro" \
+  ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 --config /config.yaml --no-dry-run --no-prompt || true
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUN_ID="nfs-test-$(date +%s)"
@@ -44,12 +49,9 @@ SERVER_TYPE="cpx32"
 
 cleanup() {
   echo "=== Cleaning up ==="
-  hcloud server delete "$NFS_SERVER" 2>/dev/null || true
-  hcloud server delete "$K8S_NODE" 2>/dev/null || true
-  # Wait for servers to be deleted before removing network
-  sleep 5
-  hcloud network delete "$NETWORK" 2>/dev/null || true
-  hcloud ssh-key delete "$RUN_ID" 2>/dev/null || true
+  docker run --rm -e HCLOUD_TOKEN="$HCLOUD_TOKEN" \
+  -v "$(cd "$(dirname "$0")" && pwd)/hetzner-nuke-config.yml:/config.yaml:ro" \
+  ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 --config /config.yaml --no-dry-run --no-prompt || true
   rm -rf "$TEST_TMPDIR"
 }
 trap cleanup EXIT
