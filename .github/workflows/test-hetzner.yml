@@ -2,6 +2,7 @@ name: Integration Test (Hetzner)
 
 on:
   pull_request:
+    types: [labeled]
   workflow_dispatch:
 
 concurrency:
@@ -10,11 +11,24 @@ concurrency:
 
 jobs:
   test:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-tests'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Remove run-tests label
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              name: 'run-tests'
+            }).catch(() => {});
 
       - name: Run integration test
         env:
