@@ -9,6 +9,12 @@
   ansible.builtin.systemd:
     daemon_reload: true
 
+- name: ensure rpc_pipefs for restart
+  listen: restart nfs
+  ansible.builtin.command:
+    cmd: mount -t rpc_pipefs sunrpc /var/lib/nfs/rpc_pipefs
+    creates: /var/lib/nfs/rpc_pipefs/nfs
+
 - name: restart nfs-server
   listen: restart nfs
   ansible.builtin.systemd:
