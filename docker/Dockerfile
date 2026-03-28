@@ -1,15 +1,17 @@
 # Stage 1: Lint and validate
 FROM python:3.13.12-slim AS lint
 
-COPY requirements.txt /tmp/requirements.txt
-COPY requirements-lint.txt /tmp/requirements-lint.txt
+COPY docker/requirements.txt /tmp/requirements.txt
+COPY docker/requirements-lint.txt /tmp/requirements-lint.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/requirements-lint.txt
 
-COPY collections/requirements.yml /tmp/requirements-collections.yml
+COPY role/collections/requirements.yml /tmp/requirements-collections.yml
 RUN ansible-galaxy collection install -r /tmp/requirements-collections.yml
 
-COPY . /ansible/roles/ansible-role-nfs-server
-COPY playbook.yml /ansible/playbook.yml
+COPY role/ /ansible/roles/ansible-role-nfs-server/
+COPY docker/playbook.yml /ansible/playbook.yml
+COPY .yamllint /ansible/roles/ansible-role-nfs-server/.yamllint
+COPY .ansible-lint /ansible/roles/ansible-role-nfs-server/.ansible-lint
 WORKDIR /ansible
 
 RUN yamllint -c roles/ansible-role-nfs-server/.yamllint roles/ansible-role-nfs-server/
@@ -39,16 +41,16 @@ RUN set -eux; \
     rm /tmp/tailscale.tgz
 
 # Install Ansible and Python dependencies
-COPY requirements.txt /tmp/requirements.txt
+COPY docker/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Install required Ansible collections
-COPY collections/requirements.yml /tmp/requirements-collections.yml
+COPY role/collections/requirements.yml /tmp/requirements-collections.yml
 RUN ansible-galaxy collection install -r /tmp/requirements-collections.yml
 
 # Copy the role and playbook
-COPY . /ansible/roles/ansible-role-nfs-server
-COPY playbook.yml /ansible/playbook.yml
+COPY role/ /ansible/roles/ansible-role-nfs-server/
+COPY docker/playbook.yml /ansible/playbook.yml
 
 WORKDIR /ansible
 

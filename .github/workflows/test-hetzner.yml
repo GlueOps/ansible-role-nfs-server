@@ -14,4 +14,4 @@ jobs:
       - name: Run integration test
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
-        run: bash scripts/test-hetzner.sh
+        run: bash tests/test-hetzner.sh

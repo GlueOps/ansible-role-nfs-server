@@ -4,6 +4,7 @@
 CLAUDE.md
 README.md
 LICENSE
+tests/
 
 .env
 *.pem
@@ -19,3 +20,7 @@ id_ed25519
 .vagrant/
 __pycache__/
 *.pyc
+
+output-test/
+*.qcow2
+*.iso

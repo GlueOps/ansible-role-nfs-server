@@ -37,7 +37,7 @@ trap "rm -f $DOCKER_KEY" EXIT
 echo "=== Test target: $USER@$HOST:$PORT ==="
 
 echo "=== Building Ansible runner container ==="
-docker build -t glueops/ansible-role-nfs-server-test "$REPO_DIR" -q
+docker build -t glueops/ansible-role-nfs-server-test -f "$REPO_DIR/docker/Dockerfile" "$REPO_DIR" -q
 
 echo "=== Running Ansible (first run) ==="
 docker run --rm --network=host \
