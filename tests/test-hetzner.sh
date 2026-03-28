@@ -202,7 +202,6 @@ spec:
   accessModes:
     - ReadWriteMany
   mountOptions:
-    - nfsvers=4.2
     - timeo=600
     - retrans=2
     - rsize=1048576
@@ -326,6 +325,7 @@ else
   exit 1
 fi
 TESTEOF
+echo ""
 
 step_end
 
