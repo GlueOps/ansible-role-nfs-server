@@ -5,6 +5,7 @@ set -euo pipefail
 #   VM1: NFS server (role applied)
 #   VM2: KIND cluster (mounts NFS, runs read/write test)
 # Requires: HCLOUD_TOKEN env var, docker, ssh-keygen, curl
+# Optional: K8S_VERSION env var (e.g. "v1.35.0") — defaults to KIND's default
 
 TEST_START=$(date +%s)
 STEP_TIMES=()
@@ -29,6 +30,9 @@ print_summary() {
   echo ""
   echo "=========================================="
   echo "=== TEST SUMMARY"
+  if [ -n "${K8S_VERSION:-}" ]; then
+    echo "=== K8s version: $K8S_VERSION"
+  fi
   echo "=========================================="
   for entry in "${STEP_TIMES[@]}"; do
     printf "  %-6s %s\n" "${entry%%  *}" "${entry#*  }"
@@ -60,16 +64,16 @@ if ! command -v hcloud &> /dev/null; then
   echo "hcloud $(hcloud version) installed"
 fi
 
-step_start "Nuke existing resources"
-docker run --rm -e HCLOUD_TOKEN="$HCLOUD_TOKEN" \
-  -v "$(cd "$(dirname "$0")" && pwd)/hetzner-nuke-config.yml:/config.yaml:ro" \
-  ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 run --config /config.yaml --no-dry-run --no-prompt || true
-
-step_end
+# Build unique run ID (include K8s version if set)
+K8S_SUFFIX=""
+if [ -n "${K8S_VERSION:-}" ]; then
+  K8S_SUFFIX="-$(echo "$K8S_VERSION" | tr -d 'v.')"
+  echo "=== Testing with Kubernetes $K8S_VERSION ==="
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-RUN_ID="nfs-test-$(date +%s)"
+RUN_ID="nfs-test-$(date +%s)${K8S_SUFFIX}"
 TEST_TMPDIR="$REPO_DIR/.test-tmp-$RUN_ID"
 mkdir -p "$TEST_TMPDIR"
 
@@ -82,10 +86,12 @@ LOCATION="hel1"
 SERVER_TYPE="cpx32"
 
 cleanup() {
-  echo "=== Cleaning up ==="
-  docker run --rm -e HCLOUD_TOKEN="$HCLOUD_TOKEN" \
-  -v "$(cd "$(dirname "$0")" && pwd)/hetzner-nuke-config.yml:/config.yaml:ro" \
-  ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 run --config /config.yaml --no-dry-run --no-prompt || true
+  echo "=== Cleaning up resources for $RUN_ID ==="
+  hcloud server delete "$NFS_SERVER" 2>/dev/null || true
+  hcloud server delete "$K8S_NODE" 2>/dev/null || true
+  sleep 5
+  hcloud network delete "$NETWORK" 2>/dev/null || true
+  hcloud ssh-key delete "$RUN_ID" 2>/dev/null || true
   rm -rf "$TEST_TMPDIR"
 }
 trap cleanup EXIT INT TERM
@@ -161,15 +167,23 @@ bash "$SCRIPT_DIR/test-remote.sh" --host "$NFS_PUBLIC_IP" --key "$TEST_TMPDIR/ke
 step_end
 
 step_start "Setup KIND cluster"
+
+# Build KIND create command
+KIND_CMD="kind create cluster --wait 120s"
+if [ -n "${K8S_VERSION:-}" ]; then
+  KIND_CMD="kind create cluster --image kindest/node:${K8S_VERSION} --wait 120s"
+  echo "Using KIND image: kindest/node:${K8S_VERSION}"
+fi
+
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-  -i "$TEST_TMPDIR/key" root@"$K8S_PUBLIC_IP" bash <<'SETUP_EOF'
+  -i "$TEST_TMPDIR/key" root@"$K8S_PUBLIC_IP" bash <<SETUP_EOF
 set -euo pipefail
 
 # Install Docker
 curl -fsSL https://get.docker.com | sh
 
 # Install kubectl
-curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/\$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 chmod +x /usr/local/bin/kubectl
 
 # Install KIND
@@ -180,7 +194,7 @@ chmod +x /usr/local/bin/kind
 apt-get update -qq && apt-get install -y -qq nfs-common
 
 # Create KIND cluster
-kind create cluster --wait 120s
+${KIND_CMD}
 
 echo "KIND cluster ready"
 kubectl get nodes
