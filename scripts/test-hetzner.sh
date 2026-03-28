@@ -58,7 +58,6 @@ trap cleanup EXIT
 
 echo "=== Generating SSH key ==="
 ssh-keygen -t ed25519 -f "$TEST_TMPDIR/key" -N "" -q
-chmod 644 "$TEST_TMPDIR/key"
 
 echo "=== Uploading SSH key to Hetzner ==="
 hcloud ssh-key create --name "$RUN_ID" --public-key-from-file "$TEST_TMPDIR/key.pub"
