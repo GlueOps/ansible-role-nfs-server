@@ -31,7 +31,7 @@ fi
 echo "=== Nuking existing Hetzner resources ==="
 docker run --rm -e HCLOUD_TOKEN="$HCLOUD_TOKEN" \
   -v "$(cd "$(dirname "$0")" && pwd)/hetzner-nuke-config.yml:/config.yaml:ro" \
-  ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 --config /config.yaml --no-dry-run --no-prompt || true
+  ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 run --config /config.yaml --no-dry-run --no-prompt || true
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -51,7 +51,7 @@ cleanup() {
   echo "=== Cleaning up ==="
   docker run --rm -e HCLOUD_TOKEN="$HCLOUD_TOKEN" \
   -v "$(cd "$(dirname "$0")" && pwd)/hetzner-nuke-config.yml:/config.yaml:ro" \
-  ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 --config /config.yaml --no-dry-run --no-prompt || true
+  ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 run --config /config.yaml --no-dry-run --no-prompt || true
   rm -rf "$TEST_TMPDIR"
 }
 trap cleanup EXIT
