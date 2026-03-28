@@ -37,8 +37,8 @@ mkdir -p "$TEST_TMPDIR"
 NFS_SERVER="${RUN_ID}-nfs"
 K8S_NODE="${RUN_ID}-k8s"
 NETWORK="${RUN_ID}-net"
-NFS_PRIVATE_IP="10.0.1.2"
-K8S_PRIVATE_IP="10.0.1.3"
+NFS_PRIVATE_IP=""
+K8S_PRIVATE_IP=""
 LOCATION="hel1"
 SERVER_TYPE="cpx32"
 
@@ -75,6 +75,7 @@ hcloud server create \
   --network "$NETWORK"
 
 NFS_PUBLIC_IP=$(hcloud server ip "$NFS_SERVER")
+NFS_PRIVATE_IP=$(hcloud server describe "$NFS_SERVER" -o json | python3 -c "import sys,json; print(json.load(sys.stdin)['private_net'][0]['ip'])")
 echo "NFS server public IP: $NFS_PUBLIC_IP"
 echo "NFS server private IP: $NFS_PRIVATE_IP"
 
@@ -88,17 +89,20 @@ hcloud server create \
   --network "$NETWORK"
 
 K8S_PUBLIC_IP=$(hcloud server ip "$K8S_NODE")
+K8S_PRIVATE_IP=$(hcloud server describe "$K8S_NODE" -o json | python3 -c "import sys,json; print(json.load(sys.stdin)['private_net'][0]['ip'])")
 echo "K8s node public IP: $K8S_PUBLIC_IP"
 echo "K8s node private IP: $K8S_PRIVATE_IP"
 
 echo "=== Waiting for SSH on both VMs ==="
 for VM_IP in "$NFS_PUBLIC_IP" "$K8S_PUBLIC_IP"; do
+  echo "Waiting for SSH on $VM_IP..."
   for i in $(seq 1 30); do
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 \
       -i "$TEST_TMPDIR/key" root@"$VM_IP" true 2>/dev/null; then
-      echo "SSH ready on $VM_IP"
+      echo "  SSH ready on $VM_IP after $((i * 10))s"
       break
     fi
+    echo "  Attempt $i/30 — waiting..."
     if [ "$i" -eq 30 ]; then
       echo "ERROR: SSH never became available on $VM_IP"
       exit 1
