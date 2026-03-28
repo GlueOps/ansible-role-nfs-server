@@ -1,0 +1,8 @@
+.test-tmp-*
+.tmp-test-key
+output-test/
+*.qcow2
+*.iso
+*.retry
+__pycache__/
+*.pyc

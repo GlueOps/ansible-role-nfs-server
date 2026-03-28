@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: nfs_server
+  namespace: glueops
+  author: GlueOps
+  description: NFS v4.2 server role for Ubuntu 24.04 LTS
+  license: MIT
+  min_ansible_version: "2.19"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+  galaxy_tags:
+    - nfs
+    - storage
+    - server
+
+dependencies: []

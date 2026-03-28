@@ -1,0 +1,5 @@
+# Managed by Ansible -- do not edit
+{% for export in nfs_exports %}
+{{ export.path }}    {% for subnet in export.subnets %}{{ subnet }}({{ export.options | default('rw,sync,no_subtree_check,insecure', true) }}){% if not loop.last %} {% endif %}{% endfor %}
+
+{% endfor %}

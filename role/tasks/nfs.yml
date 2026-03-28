@@ -1,0 +1,94 @@
+---
+- name: Validate nfs_threads
+  ansible.builtin.assert:
+    that:
+      - nfs_threads | int > 0
+    fail_msg: >
+      nfs_threads resolved to {{ nfs_threads }}. Auto-sizing uses CPU facts
+      (falls back to 8 without facts). Set nfs_threads explicitly if needed.
+
+- name: Validate export definitions
+  ansible.builtin.assert:
+    that:
+      - item.path is defined
+      - item.subnets is defined
+      - item.subnets | length > 0
+    fail_msg: "Export {{ item.path | default('UNDEFINED') }} must have at least one subnet"
+  loop: "{{ nfs_exports }}"
+
+- name: Install NFS server packages
+  ansible.builtin.apt:
+    name:
+      - nfs-kernel-server
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create export directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('nobody') }}"
+    group: "{{ item.group | default('nogroup') }}"
+    mode: "{{ item.mode | default('0755') }}"
+  loop: "{{ nfs_exports }}"
+
+- name: Deploy /etc/nfs.conf
+  ansible.builtin.template:
+    src: nfs.conf.j2
+    dest: /etc/nfs.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nfs
+
+- name: Deploy /etc/exports
+  ansible.builtin.template:
+    src: exports.j2
+    dest: /etc/exports
+    owner: root
+    group: root
+    mode: "0640"
+  notify: reload exports
+
+- name: Create systemd override directories
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.service.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - nfs-mountd
+    - rpcbind
+
+- name: Deploy systemd LimitNOFILE overrides
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ item }}.service.d/override.conf"
+    content: |
+      [Service]
+      LimitNOFILE={{ nfs_ulimit_nofile }}
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - nfs-mountd
+    - rpcbind
+  notify: restart nfs
+
+- name: Ensure proc-fs-nfsd is mounted
+  ansible.builtin.systemd:
+    name: proc-fs-nfsd.mount
+    state: started
+
+- name: Ensure rpcbind is running
+  ansible.builtin.systemd:
+    name: rpcbind
+    state: started
+    enabled: true
+
+- name: Enable and start nfs-server
+  ansible.builtin.systemd:
+    name: nfs-server
+    state: started
+    enabled: true
