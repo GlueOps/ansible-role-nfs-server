@@ -76,10 +76,16 @@
     - rpcbind
   notify: restart nfs
 
-- name: Ensure rpc_pipefs is mounted
-  ansible.builtin.command:
-    cmd: mount -t rpc_pipefs sunrpc /var/lib/nfs/rpc_pipefs
-    creates: /var/lib/nfs/rpc_pipefs/nfs
+- name: Ensure proc-fs-nfsd is mounted
+  ansible.builtin.systemd:
+    name: proc-fs-nfsd.mount
+    state: started
+
+- name: Ensure rpcbind is running
+  ansible.builtin.systemd:
+    name: rpcbind
+    state: started
+    enabled: true
 
 - name: Enable and start nfs-server
   ansible.builtin.systemd:
