@@ -99,16 +99,19 @@ echo "=== Waiting for SSH on both VMs ==="
 for VM_IP in "$NFS_PUBLIC_IP" "$K8S_PUBLIC_IP"; do
   echo "Waiting for SSH on $VM_IP..."
   for i in $(seq 1 60); do
-    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 \
-      -i "$TEST_TMPDIR/key" root@"$VM_IP" true 2>/dev/null; then
+    SSH_OUT=$(ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 \
+      -i "$TEST_TMPDIR/key" root@"$VM_IP" true 2>&1) && {
       echo "  SSH ready on $VM_IP after ${i}s"
       break
-    fi
+    }
     if [ "$((i % 10))" -eq 0 ]; then
-      echo "  Still waiting... ${i}s"
+      echo "  Still waiting after ${i}s... last SSH output:"
+      echo "$SSH_OUT" | tail -3 | sed 's/^/    /'
     fi
     if [ "$i" -eq 60 ]; then
       echo "ERROR: SSH never became available on $VM_IP"
+      echo "Last SSH output:"
+      echo "$SSH_OUT"
       exit 1
     fi
     sleep 1
