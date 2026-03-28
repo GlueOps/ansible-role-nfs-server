@@ -39,19 +39,19 @@ docker build -t glueops/ansible-role-nfs-server-test "$REPO_DIR" -q
 
 ANSIBLE_ARGS="-i ${HOST}, -u ${USER} --become --private-key=/tmp/ssh_key -e ansible_port=${PORT} -e ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
 
-DOCKER_OPTS="--rm --shm-size=256m -e ANSIBLE_PIPELINING=1"
-
 echo "=== Running Ansible (first run) ==="
-docker run $DOCKER_OPTS \
-  -v "${KEY}:/tmp/ssh_key_orig:ro" \
+docker run --rm \
+  -v "${KEY}:/tmp/ssh_key:ro" \
+  --entrypoint ansible-playbook \
   glueops/ansible-role-nfs-server-test \
-  -c "cp /tmp/ssh_key_orig /tmp/ssh_key && chmod 600 /tmp/ssh_key && ansible-playbook /ansible/playbook.yml $ANSIBLE_ARGS"
+  /ansible/playbook.yml $ANSIBLE_ARGS
 
 echo "=== Running Ansible (idempotency check) ==="
-docker run $DOCKER_OPTS \
-  -v "${KEY}:/tmp/ssh_key_orig:ro" \
+docker run --rm \
+  -v "${KEY}:/tmp/ssh_key:ro" \
   -v "${SCRIPT_DIR}/idempotency-check.sh:/tmp/idempotency-check.sh:ro" \
+  --entrypoint bash \
   glueops/ansible-role-nfs-server-test \
-  -c "cp /tmp/ssh_key_orig /tmp/ssh_key && chmod 600 /tmp/ssh_key && bash /tmp/idempotency-check.sh /ansible/playbook.yml $ANSIBLE_ARGS --diff"
+  /tmp/idempotency-check.sh /ansible/playbook.yml $ANSIBLE_ARGS --diff
 
 echo "=== All tests passed ==="
