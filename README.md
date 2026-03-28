@@ -118,6 +118,45 @@ nfs_exports:
 - **idmapd domain**: NFSv4 uses `idmapd` to map UIDs to usernames. If your NFS server and clients have different DNS domains, files may appear owned by `nobody:nogroup` on the client. Fix by setting the same `Domain` in `/etc/idmapd.conf` on both server and clients.
 - **Tailscale flags**: `--cap-add=NET_ADMIN --device=/dev/net/tun` are required for Tailscale to create its VPN tunnel inside the container. Not needed if you're only using SSH key or password auth on a reachable network.
 
+## Testing
+
+### Linting
+
+Linting runs automatically during `docker build` (yamllint, ansible-lint, syntax-check). To build and lint locally:
+
+```bash
+docker build -f docker/Dockerfile .
+```
+
+### Integration test
+
+The integration test spins up two Hetzner VMs on a private network, applies the NFS role, checks idempotency, then sets up a KIND cluster and verifies NFS read/write from Kubernetes.
+
+**Prerequisites:** `docker`, `ssh-keygen`, `curl`, and a `HCLOUD_TOKEN`
+
+```bash
+export HCLOUD_TOKEN=your-token
+bash tests/test-hetzner.sh
+```
+
+**What it tests:**
+1. Applies the NFS role to VM1 (must succeed)
+2. Runs the role again (idempotency — must report `changed=0`)
+3. Creates a KIND cluster on VM2
+4. Mounts NFS from VM1 via Kubernetes PV/PVC
+5. Writes a file from a pod, reads it from another pod
+6. Cleans up all Hetzner resources (nuke before and after)
+
+The same script runs in CI on pull requests via `.github/workflows/test-hetzner.yml`.
+
+### Run against your own server
+
+```bash
+bash tests/test-remote.sh --host <IP> --key <path-to-ssh-key> --user root
+```
+
+This builds the Docker container, runs the playbook, then runs it again to verify idempotency.
+
 ## Monitoring
 
 This role does not install monitoring tools. If you use Prometheus `node_exporter`, the built-in `nfsd` collector exposes thread utilization, RPC stats, and error counts with no extra configuration.
