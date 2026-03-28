@@ -6,6 +6,38 @@ set -euo pipefail
 #   VM2: KIND cluster (mounts NFS, runs read/write test)
 # Requires: HCLOUD_TOKEN env var, docker, ssh-keygen, curl
 
+TEST_START=$(date +%s)
+STEP_TIMES=()
+
+step_start() {
+  STEP_NAME="$1"
+  STEP_START=$(date +%s)
+  echo ""
+  echo "=========================================="
+  echo "=== $STEP_NAME"
+  echo "=========================================="
+}
+
+step_end() {
+  local elapsed=$(( $(date +%s) - STEP_START ))
+  STEP_TIMES+=("${elapsed}s  ${STEP_NAME}")
+  echo "--- ${STEP_NAME}: ${elapsed}s ---"
+}
+
+print_summary() {
+  local total=$(( $(date +%s) - TEST_START ))
+  echo ""
+  echo "=========================================="
+  echo "=== TEST SUMMARY"
+  echo "=========================================="
+  for entry in "${STEP_TIMES[@]}"; do
+    printf "  %-6s %s\n" "${entry%%  *}" "${entry#*  }"
+  done
+  echo "  ------ --------------------------------"
+  printf "  %-6s %s\n" "${total}s" "TOTAL"
+  echo "=========================================="
+}
+
 echo "=== Checking prerequisites ==="
 for cmd in docker ssh-keygen curl; do
   if ! command -v "$cmd" &> /dev/null; then
@@ -28,10 +60,12 @@ if ! command -v hcloud &> /dev/null; then
   echo "hcloud $(hcloud version) installed"
 fi
 
-echo "=== Nuking existing Hetzner resources ==="
+step_start "Nuke existing resources"
 docker run --rm -e HCLOUD_TOKEN="$HCLOUD_TOKEN" \
   -v "$(cd "$(dirname "$0")" && pwd)/hetzner-nuke-config.yml:/config.yaml:ro" \
   ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 run --config /config.yaml --no-dry-run --no-prompt || true
+
+step_end
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -56,7 +90,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "=== Generating SSH key ==="
+step_start "Create infrastructure"
 ssh-keygen -t ed25519 -f "$TEST_TMPDIR/key" -N "" -q
 
 echo "=== Uploading SSH key to Hetzner ==="
@@ -94,7 +128,9 @@ K8S_PRIVATE_IP=$(hcloud server describe "$K8S_NODE" -o json | python3 -c "import
 echo "K8s node public IP: $K8S_PUBLIC_IP"
 echo "K8s node private IP: $K8S_PRIVATE_IP"
 
-echo "=== Waiting for SSH on both VMs ==="
+step_end
+
+step_start "Wait for SSH"
 for VM_IP in "$NFS_PUBLIC_IP" "$K8S_PUBLIC_IP"; do
   echo "Waiting for SSH on $VM_IP..."
   for i in $(seq 1 60); do
@@ -117,10 +153,14 @@ for VM_IP in "$NFS_PUBLIC_IP" "$K8S_PUBLIC_IP"; do
   done
 done
 
-echo "=== Applying NFS role to server ==="
+step_end
+
+step_start "Apply NFS role"
 bash "$SCRIPT_DIR/test-remote.sh" --host "$NFS_PUBLIC_IP" --key "$TEST_TMPDIR/key" --user root
 
-echo "=== Setting up KIND on Kubernetes VM ==="
+step_end
+
+step_start "Setup KIND cluster"
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
   -i "$TEST_TMPDIR/key" root@"$K8S_PUBLIC_IP" bash <<'SETUP_EOF'
 set -euo pipefail
@@ -146,7 +186,9 @@ echo "KIND cluster ready"
 kubectl get nodes
 SETUP_EOF
 
-echo "=== Running NFS read/write test from Kubernetes ==="
+step_end
+
+step_start "NFS read/write test"
 
 # Generate K8s manifests with the actual NFS server IP
 cat > "$TEST_TMPDIR/nfs-test.yaml" <<EOF
@@ -281,4 +323,8 @@ else
 fi
 TESTEOF
 
-echo "=== All tests passed ==="
+step_end
+
+print_summary
+echo ""
+echo "=== ALL TESTS PASSED ==="
