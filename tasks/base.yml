@@ -56,10 +56,14 @@
     line: "{{ item.line }}"
     validate: 'sshd -t -f %s'
   loop:
-    - { regexp: '^#?Port ', line: 'Port {{ nfs_ssh_port }}' }
-    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
-    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin prohibit-password' }
-    - { regexp: '^#?KbdInteractiveAuthentication', line: 'KbdInteractiveAuthentication no' }
+    - regexp: '^#?Port '
+      line: 'Port {{ nfs_ssh_port }}'
+    - regexp: '^#?PasswordAuthentication'
+      line: 'PasswordAuthentication no'
+    - regexp: '^#?PermitRootLogin'
+      line: 'PermitRootLogin prohibit-password'
+    - regexp: '^#?KbdInteractiveAuthentication'
+      line: 'KbdInteractiveAuthentication no'
   notify: restart sshd
 
 - name: Lock root password

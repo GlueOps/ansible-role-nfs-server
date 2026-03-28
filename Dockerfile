@@ -1,4 +1,26 @@
+# Stage 1: Lint and validate
+FROM python:3.14.3-slim AS lint
+
+COPY requirements.txt /tmp/requirements.txt
+COPY requirements-lint.txt /tmp/requirements-lint.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/requirements-lint.txt
+
+RUN ansible-galaxy collection install community.general:==12.5.0
+
+COPY . /ansible/roles/ansible-role-nfs-server
+COPY playbook.yml /ansible/playbook.yml
+WORKDIR /ansible
+
+RUN yamllint -c roles/ansible-role-nfs-server/.yamllint roles/ansible-role-nfs-server/
+RUN ansible-lint -c roles/ansible-role-nfs-server/.ansible-lint roles/ansible-role-nfs-server/
+RUN ansible-playbook playbook.yml --syntax-check
+
+RUN touch /lint-passed
+
+# Stage 2: Runtime image
 FROM python:3.14.3-slim
+
+COPY --from=lint /lint-passed /tmp/.lint-passed
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

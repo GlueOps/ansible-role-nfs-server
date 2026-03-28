@@ -1,0 +1,10 @@
+---
+skip_list:
+  - yaml[truthy]
+  - no-changed-when
+  - command-instead-of-shell
+  - name[casing]
+  - name[play]
+
+exclude_paths:
+  - .github/
