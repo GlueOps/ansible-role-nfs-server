@@ -8,8 +8,8 @@ Ansible role to configure an NFS v4.2 server on Ubuntu 24.04 LTS.
 - `/etc/nfs.conf` — thread count, NFSv4-only (v2/v3 disabled)
 - `/etc/exports` — exports with multiple subnet support
 - systemd drop-in overrides — `LimitNOFILE` for `nfs-mountd` and `rpcbind`
-- Firewall (ufw) — TCP 2049 from specified subnets, SSH on ports 22 and 2222, port 111 (rpcbind) blocked
-- SSH hardening — port 2222, password auth disabled, root key-only, root password locked
+- Firewall (ufw) — TCP 2049 from specified subnets, ports 22 (Tailscale) and 2222 (sshd), port 111 (rpcbind) blocked
+- SSH hardening — sshd listens on port 2222 only, password auth disabled, root key-only, root password locked
 - Extra packages (tmux, curl, htop by default)
 - Service restart ordering — rpcbind, nfs-mountd, nfs-server
 
@@ -115,7 +115,7 @@ nfs_exports:
 
 ## Notes
 
-- **SSH port**: After the first run, SSH moves to port 2222. Connect with `ssh -p 2222` or configure your `~/.ssh/config`. Port 22 remains open in the firewall for Tailscale.
+- **SSH port**: sshd listens on port 2222 only. Connect with `ssh -p 2222` or configure your `~/.ssh/config`. Port 22 remains open in the firewall for Tailscale (which manages its own SSH listener), not for sshd.
 - **Password auth disabled**: After the role runs, only SSH key and Tailscale SSH access work. Ensure your key is on the server before running.
 - **idmapd domain**: NFSv4 uses `idmapd` to map UIDs to usernames. If your NFS server and clients have different DNS domains, files may appear owned by `nobody:nogroup` on the client. Fix by setting the same `Domain` in `/etc/idmapd.conf` on both server and clients.
 - **Tailscale flags**: `--cap-add=NET_ADMIN --device=/dev/net/tun` are required for Tailscale to create its VPN tunnel inside the container. Not needed if you're only using SSH key or password auth on a reachable network.

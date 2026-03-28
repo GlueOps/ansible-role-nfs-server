@@ -4,8 +4,8 @@
     that:
       - nfs_threads | int > 0
     fail_msg: >
-      nfs_threads resolved to {{ nfs_threads }}.
-      Ensure gather_facts is enabled or set nfs_threads explicitly.
+      nfs_threads resolved to {{ nfs_threads }}. Auto-sizing uses CPU facts
+      (falls back to 8 without facts). Set nfs_threads explicitly if needed.
 
 - name: Validate export definitions
   ansible.builtin.assert:
