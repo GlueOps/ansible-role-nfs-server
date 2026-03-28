@@ -39,10 +39,10 @@ ssh-keygen -t ed25519 -f "$TEST_TMPDIR/key" -N "" -q
 echo "=== Uploading SSH key to Hetzner ==="
 hcloud ssh-key create --name "$RUN_ID" --public-key-from-file "$TEST_TMPDIR/key.pub"
 
-echo "=== Creating Hetzner server (cpx21, ubuntu-24.04) ==="
+echo "=== Creating Hetzner server (cx33, ubuntu-24.04) ==="
 hcloud server create \
   --name "$RUN_ID" \
-  --type cpx21 \
+  --type cx33 \
   --image ubuntu-24.04 \
   --ssh-key "$RUN_ID" \
   --location fsn1
