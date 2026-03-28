@@ -37,7 +37,7 @@ echo "=== Building Ansible runner container ==="
 docker build -t glueops/ansible-role-nfs-server-test "$REPO_DIR" -q
 
 echo "=== Running Ansible (first run) ==="
-docker run --rm \
+docker run --rm --network=host \
   -v "${KEY}:/tmp/ssh_key:ro" \
   -e ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no" \
   --entrypoint ansible-playbook \
@@ -50,7 +50,7 @@ docker run --rm \
   -e "ansible_port=${PORT}"
 
 echo "=== Running Ansible (idempotency check) ==="
-docker run --rm \
+docker run --rm --network=host \
   -v "${KEY}:/tmp/ssh_key:ro" \
   -v "${SCRIPT_DIR}/idempotency-check.sh:/tmp/idempotency-check.sh:ro" \
   -e ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no" \
