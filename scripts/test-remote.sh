@@ -39,16 +39,16 @@ docker build -t glueops/ansible-role-nfs-server-test "$REPO_DIR" -q
 
 ANSIBLE_ARGS="-i ${HOST}, -u ${USER} --become --private-key=/tmp/ssh_key -e ansible_port=${PORT} -e ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
 
+DOCKER_OPTS="--rm --shm-size=256m -e ANSIBLE_PIPELINING=1"
+
 echo "=== Running Ansible (first run) ==="
-docker run --rm \
-  -e ANSIBLE_FORKS=1 \
+docker run $DOCKER_OPTS \
   -v "${KEY}:/tmp/ssh_key_orig:ro" \
   glueops/ansible-role-nfs-server-test \
   -c "cp /tmp/ssh_key_orig /tmp/ssh_key && chmod 600 /tmp/ssh_key && ansible-playbook /ansible/playbook.yml $ANSIBLE_ARGS"
 
 echo "=== Running Ansible (idempotency check) ==="
-docker run --rm \
-  -e ANSIBLE_FORKS=1 \
+docker run $DOCKER_OPTS \
   -v "${KEY}:/tmp/ssh_key_orig:ro" \
   -v "${SCRIPT_DIR}/idempotency-check.sh:/tmp/idempotency-check.sh:ro" \
   glueops/ansible-role-nfs-server-test \
