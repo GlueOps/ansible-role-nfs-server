@@ -203,8 +203,12 @@ spec:
     - ReadWriteMany
   mountOptions:
     - nfsvers=4.2
-    - hard
+    - timeo=600
+    - retrans=2
+    - rsize=1048576
+    - wsize=1048576
     - noresvport
+    - hard
   nfs:
     server: ${NFS_PRIVATE_IP}
     path: /var/nfs/general

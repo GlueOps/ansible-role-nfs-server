@@ -1,13 +1,14 @@
 #!/bin/bash
 set -uo pipefail
 
-# Run ansible-playbook and capture output + exit code
-set +e
-OUTPUT=$(ansible-playbook "$@" 2>&1)
-ANSIBLE_STATUS=$?
-set -e
+LOGFILE=$(mktemp)
+trap "rm -f $LOGFILE" EXIT
 
-echo "$OUTPUT"
+# Run ansible-playbook, stream output live and capture it
+set +e
+ansible-playbook "$@" 2>&1 | tee "$LOGFILE"
+ANSIBLE_STATUS=${PIPESTATUS[0]}
+set -e
 
 # If ansible-playbook itself failed, exit with its status
 if [ "$ANSIBLE_STATUS" -ne 0 ]; then
@@ -17,7 +18,7 @@ if [ "$ANSIBLE_STATUS" -ne 0 ]; then
 fi
 
 # Check for changed=0 in the play recap
-if echo "$OUTPUT" | grep -P 'changed=(?!0\b)\d+' > /dev/null; then
+if grep -P 'changed=(?!0\b)\d+' "$LOGFILE" > /dev/null; then
   echo ""
   echo "IDEMPOTENCY CHECK FAILED — second run had changes"
   exit 1
