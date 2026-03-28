@@ -33,8 +33,6 @@ nfs_allowed_subnets:
 # systemd LimitNOFILE for nfs-mountd and rpcbind
 nfs_ulimit_nofile: 524288
 
-# SSH settings
-nfs_ssh_port: 2222
 
 # Extra packages to install
 nfs_extra_packages:

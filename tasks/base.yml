@@ -29,12 +29,9 @@
 - name: Allow SSH
   community.general.ufw:
     rule: allow
-    port: "{{ item }}"
+    port: "22"
     proto: tcp
-    comment: "SSH on port {{ item }}"
-  loop:
-    - "22"
-    - "{{ nfs_ssh_port }}"
+    comment: "SSH"
 
 - name: Allow NFSv4 from trusted subnets
   community.general.ufw:
@@ -58,8 +55,6 @@
     line: "{{ item.line }}"
     validate: 'sshd -t -f %s'
   loop:
-    - regexp: '^#?Port '
-      line: 'Port {{ nfs_ssh_port }}'
     - regexp: '^#?PasswordAuthentication'
       line: 'PasswordAuthentication no'
     - regexp: '^#?PermitRootLogin'
@@ -72,20 +67,3 @@
   ansible.builtin.user:
     name: root
     password_lock: true
-
-- name: Switch Ansible to new SSH port
-  ansible.builtin.set_fact:
-    ansible_port: "{{ nfs_ssh_port }}"
-  when: nfs_ssh_port | string != ansible_port | default('22') | string
-
-- name: Flush handlers before reconnecting
-  ansible.builtin.meta: flush_handlers
-
-- name: Reconnect on new SSH port
-  ansible.builtin.meta: reset_connection
-  when: nfs_ssh_port | string != '22'
-
-- name: Wait for SSH on new port
-  ansible.builtin.wait_for_connection:
-    timeout: 30
-  when: nfs_ssh_port | string != '22'
