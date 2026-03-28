@@ -1,5 +1,5 @@
 # Stage 1: Lint and validate
-FROM python:3.14.3-slim AS lint
+FROM python:3.13.12-slim AS lint
 
 COPY requirements.txt /tmp/requirements.txt
 COPY requirements-lint.txt /tmp/requirements-lint.txt
@@ -19,7 +19,7 @@ RUN ansible-playbook playbook.yml --syntax-check
 RUN touch /lint-passed
 
 # Stage 2: Runtime image
-FROM python:3.14.3-slim
+FROM python:3.13.12-slim
 
 COPY --from=lint /lint-passed /tmp/.lint-passed
 

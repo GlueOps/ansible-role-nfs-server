@@ -13,6 +13,8 @@ id_rsa
 id_ed25519
 .ssh/
 
+.tmp-test-key
+.test-tmp-*
 *.retry
 .vagrant/
 __pycache__/
