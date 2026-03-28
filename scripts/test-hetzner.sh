@@ -147,14 +147,9 @@ kubectl get nodes
 SETUP_EOF
 
 echo "=== Running NFS read/write test from Kubernetes ==="
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-  -i "$TEST_TMPDIR/key" root@"$K8S_PUBLIC_IP" bash <<TESTEOF
-set -euo pipefail
 
-NFS_SERVER_IP="$NFS_PRIVATE_IP"
-
-# Create PV and PVC
-cat <<'K8S' | kubectl apply -f -
+# Generate K8s manifests with the actual NFS server IP
+cat > "$TEST_TMPDIR/nfs-test.yaml" <<EOF
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -169,7 +164,7 @@ spec:
     - hard
     - noresvport
   nfs:
-    server: NFS_SERVER_PLACEHOLDER
+    server: ${NFS_PRIVATE_IP}
     path: /var/nfs/general
 ---
 apiVersion: v1
@@ -184,13 +179,7 @@ spec:
       storage: 1Gi
   volumeName: nfs-test-pv
   storageClassName: ""
-K8S
-
-# Replace placeholder with actual IP
-kubectl get pv nfs-test-pv -o yaml | sed "s/NFS_SERVER_PLACEHOLDER/\$NFS_SERVER_IP/" | kubectl apply -f -
-
-# Create write pod
-cat <<'K8S' | kubectl apply -f -
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -208,11 +197,22 @@ spec:
       persistentVolumeClaim:
         claimName: nfs-test-pvc
   restartPolicy: Never
-K8S
+EOF
+
+# Copy manifests to K8s VM and apply
+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+  -i "$TEST_TMPDIR/key" "$TEST_TMPDIR/nfs-test.yaml" root@"$K8S_PUBLIC_IP":/tmp/nfs-test.yaml
+
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+  -i "$TEST_TMPDIR/key" root@"$K8S_PUBLIC_IP" bash <<'TESTEOF'
+set -euo pipefail
+
+kubectl apply -f /tmp/nfs-test.yaml
 
 echo "Waiting for writer pod..."
 kubectl wait --for=condition=Ready pod/nfs-writer --timeout=120s || true
 kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/nfs-writer --timeout=120s || true
+echo "Writer logs:"
 kubectl logs nfs-writer
 
 # Create read pod
@@ -238,14 +238,16 @@ K8S
 
 echo "Waiting for reader pod..."
 kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/nfs-reader --timeout=120s || true
-RESULT=\$(kubectl logs nfs-reader)
-echo "Read result: \$RESULT"
+RESULT=$(kubectl logs nfs-reader)
+echo "Read result: $RESULT"
 
-if [ "\$RESULT" = "nfs-test-ok" ]; then
+if [ "$RESULT" = "nfs-test-ok" ]; then
   echo "NFS READ/WRITE TEST PASSED"
 else
-  echo "NFS READ/WRITE TEST FAILED — expected 'nfs-test-ok', got '\$RESULT'"
+  echo "NFS READ/WRITE TEST FAILED — expected 'nfs-test-ok', got '$RESULT'"
+  echo "=== Writer pod details ==="
   kubectl describe pod nfs-writer
+  echo "=== Reader pod details ==="
   kubectl describe pod nfs-reader
   exit 1
 fi
