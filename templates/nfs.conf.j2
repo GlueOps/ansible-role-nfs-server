@@ -1,0 +1,15 @@
+# Managed by Ansible -- do not edit
+[general]
+
+[nfsd]
+threads = {{ nfs_threads }}
+vers2 = n
+vers3 = n
+vers4 = y
+vers4.1 = y
+vers4.2 = y
+tcp = y
+udp = n
+
+[mountd]
+manage-gids = yes

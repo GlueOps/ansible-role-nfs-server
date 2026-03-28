@@ -1,0 +1,43 @@
+---
+# NFS protocol settings
+nfs_threads: "{{ [ansible_processor_vcpus | default(0) * 2, 8] | max }}"
+
+# Exports configuration
+# Example:
+#   nfs_exports:
+#     - path: /var/nfs/general
+#       owner: nobody        # optional, default: nobody
+#       group: nogroup       # optional, default: nogroup
+#       mode: "0755"         # optional, default: 0755
+#       subnets:
+#         - "10.0.0.0/8"
+#         - "172.16.0.0/12"
+#       options: "rw,sync,no_subtree_check,insecure"
+nfs_exports:
+  - path: /var/nfs/general
+    owner: nobody
+    group: nogroup
+    mode: "0755"
+    options: "rw,sync,no_subtree_check,insecure"
+    subnets:
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+      - "192.168.0.0/16"
+
+# Subnets allowed through the firewall (TCP 2049)
+nfs_allowed_subnets:
+  - "10.0.0.0/8"
+  - "172.16.0.0/12"
+  - "192.168.0.0/16"
+
+# systemd LimitNOFILE for nfs-mountd and rpcbind
+nfs_ulimit_nofile: 524288
+
+# SSH settings
+nfs_ssh_port: 2222
+
+# Extra packages to install
+nfs_extra_packages:
+  - tmux
+  - curl
+  - htop

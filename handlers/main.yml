@@ -1,0 +1,33 @@
+---
+- name: reload exports
+  ansible.builtin.command:
+    cmd: exportfs -ra
+  changed_when: false
+
+- name: daemon reload
+  listen: restart nfs
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: restart rpcbind
+  listen: restart nfs
+  ansible.builtin.systemd:
+    name: rpcbind
+    state: restarted
+
+- name: restart nfs-mountd
+  listen: restart nfs
+  ansible.builtin.systemd:
+    name: nfs-mountd
+    state: restarted
+
+- name: restart nfs-server
+  listen: restart nfs
+  ansible.builtin.systemd:
+    name: nfs-server
+    state: restarted
+
+- name: restart sshd
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted

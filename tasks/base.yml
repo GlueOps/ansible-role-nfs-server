@@ -1,0 +1,68 @@
+---
+# Extra packages
+- name: Install extra packages
+  ansible.builtin.apt:
+    name: "{{ nfs_extra_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: nfs_extra_packages | length > 0
+
+# Firewall
+- name: Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: Set ufw default deny incoming
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: Set ufw default allow outgoing
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Allow SSH
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    comment: "SSH on port {{ item }}"
+  loop:
+    - "22"
+    - "{{ nfs_ssh_port }}"
+
+- name: Allow NFSv4 from trusted subnets
+  community.general.ufw:
+    rule: allow
+    port: "2049"
+    proto: tcp
+    from_ip: "{{ item }}"
+    comment: "NFSv4 from {{ item }}"
+  loop: "{{ nfs_allowed_subnets }}"
+
+- name: Enable ufw
+  community.general.ufw:
+    state: enabled
+    logging: "on"
+
+# SSH hardening
+- name: Configure SSH settings
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    validate: 'sshd -t -f %s'
+  loop:
+    - { regexp: '^#?Port ', line: 'Port {{ nfs_ssh_port }}' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin prohibit-password' }
+    - { regexp: '^#?KbdInteractiveAuthentication', line: 'KbdInteractiveAuthentication no' }
+  notify: restart sshd
+
+- name: Lock root password
+  ansible.builtin.user:
+    name: root
+    password_lock: true
