@@ -28,7 +28,7 @@ docker/                            # Container packaging
   requirements-lint.txt            # Lint tool versions (yamllint, ansible-lint)
 
 tests/                             # Integration tests
-  test-hetzner.sh                  # Full test: 2 Hetzner VMs, NFS role + KIND NFS read/write
+  test-hetzner.sh                  # Full test: 2 Hetzner VMs, NFS role + KIND NFS read/write (supports K8S_VERSION env var)
   test-remote.sh                   # Reusable: run role via Docker against a remote host
   idempotency-check.sh             # Wrapper: runs playbook, asserts changed=0
   hetzner-nuke-config.yml          # Config for cleaning up Hetzner resources

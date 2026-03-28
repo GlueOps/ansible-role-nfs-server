@@ -10,10 +10,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
+  nuke-before:
     if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'run-tests'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -30,13 +30,45 @@ jobs:
               name: 'run-tests'
             }).catch(() => {});
 
-      - name: Run integration test
+      - name: Nuke existing Hetzner resources
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+        run: |
+          docker run --rm -e HCLOUD_TOKEN="$HCLOUD_TOKEN" \
+            -v "$(pwd)/tests/hetzner-nuke-config.yml:/config.yaml:ro" \
+            ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 run --config /config.yaml --no-dry-run --no-prompt || true
+
+  test:
+    needs: nuke-before
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        k8s_version:
+          - "v1.35.0"
+          - "v1.34.3"
+          - "v1.33.7"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run integration test (K8s ${{ matrix.k8s_version }})
+        env:
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          K8S_VERSION: ${{ matrix.k8s_version }}
         run: bash tests/test-hetzner.sh
 
-      - name: Nuke Hetzner resources
-        if: always()
+  nuke-after:
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Nuke all Hetzner resources
         env:
           HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
         run: |

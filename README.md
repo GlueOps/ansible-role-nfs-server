@@ -137,17 +137,20 @@ The integration test spins up two Hetzner VMs on a private network, applies the 
 ```bash
 export HCLOUD_TOKEN=your-token
 bash tests/test-hetzner.sh
+
+# Test with a specific Kubernetes version
+K8S_VERSION=v1.34.3 bash tests/test-hetzner.sh
 ```
 
 **What it tests:**
 1. Applies the NFS role to VM1 (must succeed)
 2. Runs the role again (idempotency — must report `changed=0`)
-3. Creates a KIND cluster on VM2
+3. Creates a KIND cluster on VM2 (with optional K8s version)
 4. Mounts NFS from VM1 via Kubernetes PV/PVC
 5. Writes a file from a pod, reads it from another pod
-6. Cleans up all Hetzner resources (nuke before and after)
+6. Cleans up Hetzner resources on exit
 
-The same script runs in CI on pull requests via `.github/workflows/test-hetzner.yml`.
+In CI, the test runs as a matrix against K8s v1.35, v1.34, and v1.33 in parallel. Triggered by adding the `run-tests` label to a PR.
 
 ### Run against your own server
 
