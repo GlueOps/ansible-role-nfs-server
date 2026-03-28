@@ -1,11 +1,11 @@
 ---
-- name: NFS server setup
-  ansible.builtin.import_tasks: nfs.yml
-  tags: nfs
-
 - name: Base system setup
   ansible.builtin.import_tasks: base.yml
   tags: base
+
+- name: NFS server setup
+  ansible.builtin.import_tasks: nfs.yml
+  tags: nfs
 
 - name: System updates
   ansible.builtin.import_tasks: updates.yml
