@@ -5,10 +5,10 @@
   changed_when: false
 
 - name: restart nfs
-  ansible.builtin.shell: |
-    systemctl daemon-reload
-    systemctl stop nfs-server || true
-    systemctl start nfs-server
+  ansible.builtin.systemd:
+    name: nfs-server
+    state: restarted
+    daemon_reload: true
 
 - name: restart sshd
   ansible.builtin.systemd:

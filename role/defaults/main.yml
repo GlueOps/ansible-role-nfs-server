@@ -1,6 +1,6 @@
 ---
 # NFS protocol settings
-nfs_threads: "{{ [ansible_processor_vcpus | default(0) * 2, 8] | max }}"
+nfs_threads: "{{ [(ansible_processor_vcpus | default(0)) * 2, 8] | max }}"
 
 # Exports configuration
 # Example:

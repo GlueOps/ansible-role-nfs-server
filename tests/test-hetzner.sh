@@ -88,7 +88,7 @@ cleanup() {
   ghcr.io/cgroschupp/hetzner-nuke:v0.6.2 run --config /config.yaml --no-dry-run --no-prompt || true
   rm -rf "$TEST_TMPDIR"
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM
 
 step_start "Create infrastructure"
 ssh-keygen -t ed25519 -f "$TEST_TMPDIR/key" -N "" -q
