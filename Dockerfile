@@ -5,7 +5,8 @@ COPY requirements.txt /tmp/requirements.txt
 COPY requirements-lint.txt /tmp/requirements-lint.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/requirements-lint.txt
 
-RUN ansible-galaxy collection install community.general:==12.5.0
+COPY collections/requirements.yml /tmp/requirements-collections.yml
+RUN ansible-galaxy collection install -r /tmp/requirements-collections.yml
 
 COPY . /ansible/roles/ansible-role-nfs-server
 COPY playbook.yml /ansible/playbook.yml
@@ -42,7 +43,8 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Install required Ansible collections
-RUN ansible-galaxy collection install community.general:==12.5.0
+COPY collections/requirements.yml /tmp/requirements-collections.yml
+RUN ansible-galaxy collection install -r /tmp/requirements-collections.yml
 
 # Copy the role and playbook
 COPY . /ansible/roles/ansible-role-nfs-server
