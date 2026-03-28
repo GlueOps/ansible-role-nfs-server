@@ -14,7 +14,7 @@ role/                              # The Ansible role (clean, portable)
     nfs.yml                        # NFS server: packages, nfs.conf, exports, systemd overrides, services
     base.yml                       # Base system: extra packages, ufw firewall, SSH hardening
     updates.yml                    # OS updates: apt update/upgrade, reboot check
-  handlers/main.yml                # Service restart handlers (listen pattern for ordered restarts)
+  handlers/main.yml                # Service restart handlers
   templates/
     nfs.conf.j2                    # NFS daemon config (v4-only, thread count)
     exports.j2                     # NFS exports (multi-subnet support)

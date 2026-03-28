@@ -11,7 +11,7 @@ Ansible role to configure an NFS v4.2 server on Ubuntu 24.04 LTS.
 - Firewall (ufw) — TCP 2049 from specified subnets, SSH on port 22, port 111 (rpcbind) blocked
 - SSH hardening — password auth disabled, root key-only, root password locked
 - Extra packages (tmux, curl, htop by default)
-- Service restart ordering — rpcbind, nfs-mountd, nfs-server
+- Service restart — nfs-server (stop+start with daemon-reload)
 
 ## Quick start
 
