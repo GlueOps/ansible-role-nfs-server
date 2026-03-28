@@ -28,8 +28,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 KEY="$(cd "$(dirname "$KEY")" && pwd)/$(basename "$KEY")"
 
-# Docker needs to read the key file for volume mount
-chmod 644 "$KEY"
+# Docker needs a readable copy of the key for volume mount
+DOCKER_KEY="${KEY}.docker"
+cp "$KEY" "$DOCKER_KEY"
+chmod 644 "$DOCKER_KEY"
+trap "rm -f $DOCKER_KEY" EXIT
 
 echo "=== Test target: $USER@$HOST:$PORT ==="
 
@@ -38,7 +41,7 @@ docker build -t glueops/ansible-role-nfs-server-test "$REPO_DIR" -q
 
 echo "=== Running Ansible (first run) ==="
 docker run --rm --network=host \
-  -v "${KEY}:/tmp/ssh_key:ro" \
+  -v "${DOCKER_KEY}:/tmp/ssh_key:ro" \
   -e ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no" \
   --entrypoint ansible-playbook \
   glueops/ansible-role-nfs-server-test \
@@ -51,7 +54,7 @@ docker run --rm --network=host \
 
 echo "=== Running Ansible (idempotency check) ==="
 docker run --rm --network=host \
-  -v "${KEY}:/tmp/ssh_key:ro" \
+  -v "${DOCKER_KEY}:/tmp/ssh_key:ro" \
   -v "${SCRIPT_DIR}/idempotency-check.sh:/tmp/idempotency-check.sh:ro" \
   -e ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no" \
   --entrypoint bash \
