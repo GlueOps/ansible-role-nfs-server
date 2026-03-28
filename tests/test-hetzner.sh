@@ -207,13 +207,29 @@ ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
   -i "$TEST_TMPDIR/key" root@"$K8S_PUBLIC_IP" bash <<'TESTEOF'
 set -euo pipefail
 
+echo "=== Applying NFS test manifests ==="
 kubectl apply -f /tmp/nfs-test.yaml
 
-echo "Waiting for writer pod..."
+echo "=== Cluster state after apply ==="
+echo "--- Nodes ---"
+kubectl get nodes -o wide
+echo "--- PVs ---"
+kubectl get pv -o wide
+echo "--- PVCs ---"
+kubectl get pvc -o wide
+echo "--- Pods ---"
+kubectl get pods -o wide
+
+echo "=== Waiting for writer pod ==="
 kubectl wait --for=condition=Ready pod/nfs-writer --timeout=120s || true
 kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/nfs-writer --timeout=120s || true
-echo "Writer logs:"
+
+echo "--- Writer pod status ---"
+kubectl get pod nfs-writer -o wide
+echo "--- Writer pod logs ---"
 kubectl logs nfs-writer
+echo "--- Writer pod describe ---"
+kubectl describe pod nfs-writer
 
 # Create read pod
 cat <<'K8S' | kubectl apply -f -
@@ -236,19 +252,31 @@ spec:
   restartPolicy: Never
 K8S
 
-echo "Waiting for reader pod..."
+echo "=== Waiting for reader pod ==="
 kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/nfs-reader --timeout=120s || true
+
+echo "--- Reader pod status ---"
+kubectl get pod nfs-reader -o wide
+echo "--- Reader pod logs ---"
 RESULT=$(kubectl logs nfs-reader)
 echo "Read result: $RESULT"
+echo "--- Reader pod describe ---"
+kubectl describe pod nfs-reader
+
+echo "=== Final cluster state ==="
+echo "--- All pods ---"
+kubectl get pods -A -o wide
+echo "--- All PVs ---"
+kubectl get pv -o wide
+echo "--- All PVCs ---"
+kubectl get pvc -o wide
+echo "--- Events ---"
+kubectl get events --sort-by='.lastTimestamp' | tail -20
 
 if [ "$RESULT" = "nfs-test-ok" ]; then
   echo "NFS READ/WRITE TEST PASSED"
 else
   echo "NFS READ/WRITE TEST FAILED — expected 'nfs-test-ok', got '$RESULT'"
-  echo "=== Writer pod details ==="
-  kubectl describe pod nfs-writer
-  echo "=== Reader pod details ==="
-  kubectl describe pod nfs-reader
   exit 1
 fi
 TESTEOF
