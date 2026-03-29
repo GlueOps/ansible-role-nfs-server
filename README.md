@@ -40,7 +40,7 @@ tailscaled --state=/var/lib/tailscale/tailscaled.state &
 sleep 2
 tailscale up --hostname="ansible-nfs-runner" --ssh
 # Click the login URL, then:
-ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root
 ```
 
 **Option 2: SSH key**
@@ -52,7 +52,7 @@ docker run --rm -it \
   ghcr.io/glueops/ansible-role-nfs-server:latest
 
 # Inside the container:
-ansible-playbook /ansible/playbook.yml -i "10.0.50.10," -u root --private-key=/root/.ssh/id_rsa
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "10.0.50.10," -u root --private-key=/root/.ssh/id_rsa
 ```
 
 ### Tags
@@ -61,16 +61,16 @@ Run specific subsets of the role:
 
 ```bash
 # Everything (NFS + base, but NOT updates)
-ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root
 
 # Only NFS config
-ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags nfs
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags nfs
 
 # Only base setup (firewall, SSH, extra packages)
-ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags base
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags base
 
 # Update and upgrade all packages (must be explicitly requested)
-ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags updates
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags updates
 ```
 
 | Tag | What it does |
@@ -84,7 +84,7 @@ ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags updates
 Pass extra vars on the command line:
 
 ```bash
-ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root \
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root \
   -e '{"nfs_exports": [{"path": "/var/nfs/data", "owner": "nobody", "group": "nogroup", "mode": "0755", "options": "rw,sync,no_subtree_check,insecure", "subnets": ["10.0.0.0/8"]}]}'
 ```
 
