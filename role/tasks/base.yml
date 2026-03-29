@@ -48,6 +48,14 @@
     logging: "on"
 
 # SSH hardening
+- name: Ensure sshd privilege separation directory exists
+  ansible.builtin.file:
+    path: /run/sshd
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Configure SSH settings
   ansible.builtin.lineinfile:
     path: /etc/ssh/sshd_config
