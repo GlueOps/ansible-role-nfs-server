@@ -85,7 +85,7 @@ Pass extra vars on the command line:
 
 ```bash
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root \
-  -e '{"nfs_exports": [{"path": "/var/nfs/data", "owner": "nobody", "group": "nogroup", "mode": "0755", "options": "rw,sync,no_subtree_check,insecure", "subnets": ["10.0.0.0/8"]}]}'
+  -e '{"nfs_exports": [{"path": "/var/nfs/data", "owner": "nobody", "group": "nogroup", "mode": "0755", "options": "rw,sync,no_subtree_check,insecure,no_root_squash", "subnets": ["10.0.0.0/8"]}]}'
 ```
 
 ## Variables
@@ -109,7 +109,7 @@ nfs_exports:
     subnets:
       - "10.0.0.0/8"
       - "172.16.0.0/12"
-    options: "rw,sync,no_subtree_check,insecure"  # optional, this is the default
+    options: "rw,sync,no_subtree_check,insecure,no_root_squash"  # optional, this is the default
 ```
 
 ## Notes
