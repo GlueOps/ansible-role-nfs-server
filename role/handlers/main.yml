@@ -6,7 +6,7 @@
   changed_when: true
   # exportfs frequently exits 0 while reporting per-line parse errors on stderr,
   # so rc alone is not enough to know the export table actually applied.
-  failed_when: nfs_exportfs.rc != 0 or 'exportfs:' in nfs_exportfs.stderr
+  failed_when: nfs_exportfs.rc != 0 or 'exportfs:' in (nfs_exportfs.stderr | default(''))
 
 - name: restart nfs
   ansible.builtin.shell: |

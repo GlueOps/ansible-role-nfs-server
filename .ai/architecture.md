@@ -11,12 +11,12 @@ role/                              # The Ansible role (clean, portable)
   defaults/main.yml                # All configurable variables with defaults
   tasks/
     main.yml                       # Entry point — imports task files with tags
-    nfs.yml                        # NFS server: packages, nfs.conf, exports, systemd overrides, services
+    nfs.yml                        # NFS server: packages, nfs.conf drop-in, exports, systemd overrides, services
     base.yml                       # Base system: extra packages, ufw firewall, SSH hardening
     updates.yml                    # OS updates: apt update/upgrade, reboot check
   handlers/main.yml                # Service restart handlers
   templates/
-    nfs.conf.j2                    # NFS daemon config (v4-only, thread count)
+    nfs.conf.j2                    # NFS daemon config drop-in -> /etc/nfs.conf.d/10-glueops.conf (v4-only, thread count)
     exports.j2                     # NFS exports (multi-subnet support)
   meta/main.yml                    # Ansible Galaxy metadata
   collections/requirements.yml     # Ansible collection dependencies

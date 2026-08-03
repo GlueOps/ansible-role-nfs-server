@@ -40,7 +40,6 @@
     owner: root
     group: root
     mode: "0644"
-    validate: nfsconf --file %s --dump
   notify: restart nfs
 
 - name: Deploy /etc/exports
