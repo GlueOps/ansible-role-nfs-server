@@ -2,7 +2,11 @@
 - name: reload exports
   ansible.builtin.command:
     cmd: exportfs -ra
-  changed_when: false
+  register: nfs_exportfs
+  changed_when: true
+  # exportfs frequently exits 0 while reporting per-line parse errors on stderr,
+  # so rc alone is not enough to know the export table actually applied.
+  failed_when: nfs_exportfs.rc != 0 or 'exportfs:' in nfs_exportfs.stderr
 
 - name: restart nfs
   ansible.builtin.shell: |

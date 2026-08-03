@@ -1,9 +1,16 @@
 # Managed by Ansible -- do not edit
+#
+# Shipped as a drop-in so the distro-managed /etc/nfs.conf stays intact.
+# Overwriting that file removes its active `pipefs-directory` setting, which
+# stops rpc-pipefs-generator emitting rpc_pipefs.target -- and nfsdcld,
+# nfs-idmapd, rpc-gssd and nfs-blkmap all hard-Require that target.
 [general]
+# Re-asserted defensively: hosts converged by earlier versions of this role
+# have a clobbered /etc/nfs.conf and need this to recover.
+pipefs-directory = /run/rpc_pipefs
 
 [nfsd]
 threads = {{ nfs_threads }}
-vers2 = n
 vers3 = n
 vers4 = y
 vers4.1 = y
@@ -12,4 +19,6 @@ tcp = y
 udp = n
 
 [mountd]
+# Also re-asserted defensively -- the distro sets this, but a clobbered
+# /etc/nfs.conf lost it, and losing it silently reverts to manage-gids=n.
 manage-gids = yes

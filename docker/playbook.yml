@@ -2,5 +2,10 @@
 - hosts: all
   become: true
   gather_facts: true
+  # Without this, a failure in any task after /etc/exports is written leaves the
+  # new file on disk but never `exportfs -ra`'d. The next run sees the file
+  # already correct, notifies nothing, and the server serves the stale export
+  # table indefinitely.
+  force_handlers: true
   roles:
     - ansible-role-nfs-server
