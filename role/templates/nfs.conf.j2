@@ -22,3 +22,7 @@ udp = n
 # Also re-asserted defensively -- the distro sets this, but a clobbered
 # /etc/nfs.conf lost it, and losing it silently reverts to manage-gids=n.
 manage-gids = yes
+# nfs-utils defaults to a single thread. mountd still serves the kernel's
+# export-authentication upcalls on a v4-only server, so one thread serialises
+# first-touch from every client.
+threads = {{ nfs_mountd_threads }}

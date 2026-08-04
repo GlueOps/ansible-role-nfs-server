@@ -1,0 +1,10 @@
+# Managed by Ansible -- do not edit
+#
+# Rendered from nfs_sysctl_settings. The rationale for each value lives beside
+# it in the role's defaults/main.yml; override that variable rather than this
+# file. A key prefixed with "-" is applied best-effort: when it does not exist
+# (e.g. an unloaded module) systemd-sysctl skips it silently instead of logging
+# a warning on every boot.
+{% for key, value in nfs_sysctl_settings.items() %}
+{{ key }} = {{ value }}
+{% endfor %}
