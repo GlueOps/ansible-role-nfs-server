@@ -109,10 +109,40 @@ nfs_exports:
     subnets:
       - "10.0.0.0/8"
       - "172.16.0.0/12"
-    options: "rw,sync,no_subtree_check,insecure,no_root_squash"  # optional, this is the default
+    options: "rw,sync,no_subtree_check,insecure"  # optional; see role/defaults/main.yml
 ```
 
 ## Notes
+
+- **`root_squash` is in effect by default.** The default `options` above do not
+  include `no_root_squash`, so the kernel default (`root_squash`) applies: a
+  client connecting as uid 0 is mapped to `nobody`. That is deliberate — see
+  [design decisions](.ai/design-decisions.md).
+
+  It matters more than it looks for anything that reads or writes the whole
+  export as root, such as a backup job:
+
+  - Files that are not world-readable cannot be read at all, so a backup
+    silently skips them and can still report success.
+  - `chown` is not permitted, so a restore cannot reproduce file ownership.
+
+  If you need that, set `no_root_squash` explicitly and narrow `subnets` and
+  `nfs_allowed_subnets` to the specific clients that require it — it grants
+  root-equivalent access to the entire export to any client on those subnets:
+
+  ```yaml
+  nfs_exports:
+    - path: /var/nfs/general
+      options: "rw,sync,no_subtree_check,insecure,no_root_squash"
+      subnets: ["10.0.0.0/24"]   # narrow -- not all of RFC1918
+  ```
+
+- **`nfs_allowed_subnets` changes are additive at the firewall.** The role adds
+  a ufw rule per subnet and never removes rules for subnets you have taken out
+  of the list. After narrowing the list, delete the stale rules by hand
+  (`ufw status numbered`, then `ufw delete allow from <old-cidr> to any port
+  2049 proto tcp`) or the firewall stays as open as it was. The `/etc/exports`
+  narrowing is declarative and does take effect on its own.
 
 - **Password auth disabled**: After the role runs, only SSH key and Tailscale SSH access work. Ensure your key is on the server before running.
 - **idmapd domain**: NFSv4 uses `idmapd` to map UIDs to usernames. If your NFS server and clients have different DNS domains, files may appear owned by `nobody:nogroup` on the client. Fix by setting the same `Domain` in `/etc/idmapd.conf` on both server and clients.
