@@ -65,8 +65,16 @@ jobs:
         run: bash tests/test-hetzner.sh
 
   nuke-after:
-    if: always()
-    needs: test
+    # `always()` alone would run this job even when the gated jobs above are
+    # SKIPPED -- i.e. adding any unrelated label to any PR would nuke the whole
+    # Hetzner project. The trigger condition must be repeated here.
+    needs: [nuke-before, test]
+    if: >-
+      always() && (
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event.label.name == 'run-tests'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

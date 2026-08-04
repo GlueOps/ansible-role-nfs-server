@@ -56,20 +56,46 @@
     group: root
     mode: "0755"
 
-- name: Configure SSH settings
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
+# /etc/ssh/sshd_config on Ubuntu 24.04 begins with
+# `Include /etc/ssh/sshd_config.d/*.conf`, and sshd takes the FIRST value it
+# obtains for a keyword. Editing the main file therefore loses to any drop-in --
+# cloud images ship 50-cloud-init.conf, which commonly sets
+# `PasswordAuthentication yes`. The 00- prefix is load-bearing: included files
+# are read in lexical order, so a 99- file would lose to 50-cloud-init.conf.
+- name: Deploy SSH hardening drop-in
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/00-hardening.conf
+    content: |
+      # Managed by Ansible -- do not edit
+      PasswordAuthentication no
+      PermitRootLogin prohibit-password
+      KbdInteractiveAuthentication no
+    owner: root
+    group: root
+    mode: "0644"
     validate: 'sshd -t -f %s'
-  loop:
-    - regexp: '^#?PasswordAuthentication'
-      line: 'PasswordAuthentication no'
-    - regexp: '^#?PermitRootLogin'
-      line: 'PermitRootLogin prohibit-password'
-    - regexp: '^#?KbdInteractiveAuthentication'
-      line: 'KbdInteractiveAuthentication no'
   notify: restart sshd
+
+# `validate` above only proves the snippet parses; it cannot prove our values
+# survived the merge. Asserting on the effective config is what turns a silent
+# shadowing regression into a loud failure.
+- name: Read effective SSH configuration
+  ansible.builtin.command:
+    cmd: sshd -T
+  changed_when: false
+  register: nfs_sshd_effective
+
+- name: Assert SSH hardening actually took effect
+  ansible.builtin.assert:
+    that:
+      - "'passwordauthentication no' in (nfs_sshd_effective.stdout | lower)"
+      - "'kbdinteractiveauthentication no' in (nfs_sshd_effective.stdout | lower)"
+      - "'permitrootlogin yes' not in (nfs_sshd_effective.stdout | lower)"
+    fail_msg: >-
+      sshd -T shows hardening did not take effect. A drop-in in
+      /etc/ssh/sshd_config.d/ that sorts before 00-hardening.conf is
+      overriding it.
+    quiet: true
 
 - name: Lock root password
   ansible.builtin.user:

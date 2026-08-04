@@ -5,11 +5,11 @@ Ansible role to configure an NFS v4.2 server on Ubuntu 24.04 LTS.
 ## What it configures
 
 - Installs `nfs-kernel-server`
-- `/etc/nfs.conf` — thread count, NFSv4-only (v2/v3 disabled)
+- `/etc/nfs.conf.d/10-glueops.conf` — thread count, NFSv4-only (v3 disabled). Shipped as a drop-in so the distro-managed `/etc/nfs.conf` stays intact
 - `/etc/exports` — exports with multiple subnet support
 - systemd drop-in overrides — `LimitNOFILE` for `nfs-mountd` and `rpcbind`
 - Firewall (ufw) — TCP 2049 from specified subnets, SSH on port 22, port 111 (rpcbind) blocked
-- SSH hardening — password auth disabled, root key-only, root password locked
+- SSH hardening — password auth disabled, root key-only, root password locked. Applied via `/etc/ssh/sshd_config.d/00-hardening.conf`; the `00-` prefix is required so it wins over cloud-init's `50-cloud-init.conf` (sshd takes the first value it obtains)
 - Extra packages (tmux, curl, htop by default)
 - Service restart — nfs-server (stop+start with daemon-reload)
 
@@ -75,7 +75,7 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 
 | Tag | What it does |
 |---|---|
-| `nfs` | Install nfs-kernel-server, deploy nfs.conf, exports, systemd overrides, start services |
+| `nfs` | Install nfs-kernel-server, deploy the nfs.conf drop-in, exports, systemd overrides, start services |
 | `base` | Install extra packages, configure ufw (firewall), SSH hardening, lock root password |
 | `updates` | `apt update && apt dist-upgrade`, reports if reboot is needed. Skipped by default. |
 

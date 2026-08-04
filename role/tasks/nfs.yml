@@ -33,10 +33,10 @@
     mode: "{{ item.mode | default('0755') }}"
   loop: "{{ nfs_exports }}"
 
-- name: Deploy /etc/nfs.conf
+- name: Deploy NFS server config drop-in
   ansible.builtin.template:
     src: nfs.conf.j2
-    dest: /etc/nfs.conf
+    dest: /etc/nfs.conf.d/10-glueops.conf
     owner: root
     group: root
     mode: "0644"

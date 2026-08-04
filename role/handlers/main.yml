@@ -2,7 +2,17 @@
 - name: reload exports
   ansible.builtin.command:
     cmd: exportfs -ra
-  changed_when: false
+  register: nfs_exportfs
+  changed_when: true
+  # exportfs frequently exits 0 while reporting per-line errors on stderr, so rc
+  # alone is not enough to know the export table actually applied. Match only
+  # genuine errors: matching every "exportfs:" line would also trip on the
+  # non-fatal "Neither 'subtree_check' or 'no_subtree_check' specified ...
+  # Assuming default behaviour" warning, which is emitted for any export that
+  # omits the subtree directive and must not fail the run.
+  failed_when: >-
+    nfs_exportfs.rc != 0 or
+    (nfs_exportfs.stderr | default('')) is search('Invalid|does not support NFS export|requires fsid=|bad anon(uid|gid)|duplicated export entries')
 
 - name: restart nfs
   ansible.builtin.shell: |
