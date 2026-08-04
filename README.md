@@ -114,7 +114,7 @@ nfs_exports:
     subnets:
       - "10.0.0.0/8"
       - "172.16.0.0/12"
-    options: "rw,sync,no_subtree_check,insecure"  # optional; see role/defaults/main.yml
+    options: "rw,sync,no_subtree_check,insecure,no_root_squash"  # optional; see role/defaults/main.yml
 ```
 
 ## Performance tuning
@@ -200,28 +200,33 @@ your Kubernetes nodes / PV definitions:
 
 ## Notes
 
-- **`root_squash` is in effect by default.** The default `options` above do not
-  include `no_root_squash`, so the kernel default (`root_squash`) applies: a
-  client connecting as uid 0 is mapped to `nobody`. That is deliberate — see
-  [design decisions](.ai/design-decisions.md).
+- **`no_root_squash` is the default.** A client connecting as uid 0 stays uid 0
+  on the server, rather than being mapped to `nobody`. See
+  [design decisions](.ai/design-decisions.md) for why.
 
-  It matters more than it looks for anything that reads or writes the whole
-  export as root, such as a backup job:
-
-  - Files that are not world-readable cannot be read at all, so a backup
-    silently skips them and can still report success.
-  - `chown` is not permitted, so a restore cannot reproduce file ownership.
-
-  If you need that, set `no_root_squash` explicitly and narrow `subnets` and
-  `nfs_allowed_subnets` to the specific clients that require it — it grants
-  root-equivalent access to the entire export to any client on those subnets:
+  **This means any client that can mount the export has root over all of its
+  data.** The boundary is `subnets` (and the firewall), not uid mapping — so
+  scope those to the hosts that genuinely need the export:
 
   ```yaml
   nfs_exports:
     - path: /var/nfs/general
-      options: "rw,sync,no_subtree_check,insecure,no_root_squash"
-      subnets: ["10.0.0.0/24"]   # narrow -- not all of RFC1918
+      subnets: ["10.0.50.0/24"]   # the clients that need it, not all of RFC1918
   ```
+
+  To restore the previous squashing behaviour, drop the option:
+
+  ```yaml
+  nfs_exports:
+    - path: /var/nfs/general
+      options: "rw,sync,no_subtree_check,insecure"
+  ```
+
+  Be aware of what squashing costs you: a process running as root on a client
+  cannot read files that are not world-readable, and cannot `chown`. Backup and
+  restore tooling needs both — under squashing a backup silently skips
+  unreadable files while still reporting success, and a restore cannot
+  reproduce ownership.
 
 - **`nfs_allowed_subnets` changes are additive at the firewall.** The role adds
   a ufw rule per subnet and never removes rules for subnets you have taken out

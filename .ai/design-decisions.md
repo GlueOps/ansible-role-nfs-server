@@ -2,7 +2,31 @@
 
 - **NFSv4-only**: v2/v3 disabled. No need for rpcbind (kept running but firewalled off on port 111).
 - **`insecure` export option**: Required because Kubernetes clients use `noresvport`.
-- **`root_squash` is implicit**: Not explicitly set — kernel default applies. Export dirs owned by `nobody:nogroup`.
+- **`no_root_squash` is the default** (changed; previously the kernel default
+  `root_squash` applied implicitly). A client connecting as uid 0 stays uid 0 on
+  the server. Export dirs are still created `nobody:nogroup 0755`.
+
+  Rationale: the role's exports are consumed by hosts that need to operate on
+  the whole tree as root — principally backup and restore. Under `root_squash`
+  those fail in the worst possible way, *partially*: a default umask leaves most
+  files world-readable, so a backup appears to succeed while silently skipping
+  every mode-0600 file (ssh keys, credentials, tokens), and a restore cannot
+  `chown`, so files land owned by `nobody` and the owning uid cannot write them.
+  The result is a green backup that restores to an unusable state.
+
+  The trade is explicit: **any client that can mount the export now has root
+  over all of its data.** The security boundary is `subnets` plus the firewall,
+  not uid mapping. Scope `subnets` and `nfs_allowed_subnets` to the hosts that
+  actually need the export rather than leaving them at RFC1918-wide.
+
+  Note this is not much of a boundary shift where clients already run
+  privileged workloads — a container that can gain uid 0 and mount the PV was
+  never meaningfully constrained by squashing. It *is* a real change for
+  clients that cannot.
+
+  Consumers who want the old behaviour set
+  `options: "rw,sync,no_subtree_check,insecure"` explicitly. The template
+  fallback tracks this default, so it is `no_root_squash` too.
 - **Tags**: `nfs`, `base`, `updates` (never). Tags control what runs. `updates` requires explicit `--tags updates`.
 - **Config as a drop-in**: NFS settings go to `/etc/nfs.conf.d/10-glueops.conf`, never to `/etc/nfs.conf`. Overwriting the distro file removes its active `pipefs-directory`, and `rpc-pipefs-generator` has no fallback — so `rpc_pipefs.target` is never generated and `nfsdcld`, `nfs-idmapd`, `rpc-gssd` and `nfs-blkmap` all fail to start. The drop-in re-asserts `pipefs-directory` and `manage-gids` so hosts damaged by earlier versions recover. Drop-in values win over `/etc/nfs.conf` for conflicting keys (verified).
 - **Handler pattern**: `restart nfs` uses shell to daemon-reload then stop+start nfs-server. This was originally attributed to `systemctl restart` failing on fresh Ubuntu 24.04 "due to rpc_pipefs.target" — that failure was self-inflicted by the `/etc/nfs.conf` clobbering above, now fixed. The workaround is retained only until a plain `systemctl restart nfs-server` is confirmed working on a live host; it can then become `ansible.builtin.systemd_service` with `daemon_reload: true`.

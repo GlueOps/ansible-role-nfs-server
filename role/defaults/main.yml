@@ -22,13 +22,18 @@ nfs_mountd_threads: 8
 #       subnets:
 #         - "10.0.0.0/8"
 #         - "172.16.0.0/12"
-#       options: "rw,sync,no_subtree_check,insecure"
+#       options: "rw,sync,no_subtree_check,insecure,no_root_squash"
 nfs_exports:
   - path: /var/nfs/general
     owner: nobody
     group: nogroup
     mode: "0755"
-    options: "rw,sync,no_subtree_check,insecure"
+    # no_root_squash: a client connecting as uid 0 stays uid 0 on the server.
+    # Required by anything that reads or writes the whole export as root -- a
+    # backup cannot read files that are not world-readable without it, and a
+    # restore cannot reproduce ownership. See .ai/design-decisions.md.
+    # Bound the blast radius with `subnets`, not by re-enabling squashing.
+    options: "rw,sync,no_subtree_check,insecure,no_root_squash"
     subnets:
       - "10.0.0.0/8"
       - "172.16.0.0/12"
