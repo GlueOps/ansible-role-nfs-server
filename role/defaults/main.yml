@@ -1,6 +1,16 @@
 ---
 # NFS protocol settings
-nfs_threads: "{{ [(ansible_processor_vcpus | default(0)) * 2, 8] | max }}"
+#
+# nfsd threads are kernel threads that block on disk I/O, so the useful count
+# tracks I/O concurrency, not CPU count. 4x vCPU with a floor of 16 keeps a
+# small server from serialising on the stock 8; the 256 cap is the point past
+# which more threads just add contention.
+nfs_threads: "{{ [[(ansible_processor_vcpus | default(0)) * 4, 16] | max, 256] | min }}"
+
+# rpc.mountd threads. Defaults to 1 in nfs-utils. Even on a v4-only server
+# mountd answers the kernel's export-authentication upcalls, so a single
+# thread serialises every first-touch from every client.
+nfs_mountd_threads: 8
 
 # Exports configuration
 # Example:
@@ -30,9 +40,67 @@ nfs_allowed_subnets:
   - "172.16.0.0/12"
   - "192.168.0.0/16"
 
-# systemd LimitNOFILE for nfs-mountd and rpcbind
+# The nofile HARD ceiling for nfs-mountd and rpcbind (systemd) and for PAM
+# login sessions. Applied as LimitNOFILE=1024:<this>; the soft limit is left
+# alone on purpose.
+#
+# This is not a performance knob. nfsd is kernel threads and has no fd limit;
+# rpc.mountd uses select() and forces its own soft limit back to FD_SETSIZE
+# (1024) at startup no matter what we set, using ~15 fds; rpcbind uses ~9. The
+# default below equals systemd's own hard limit (1024:524288), so it changes
+# nothing unless you raise it. Asserted against fs.nr_open in tasks/tuning.yml.
 nfs_ulimit_nofile: 524288
 
+# Kernel tuning written to /etc/sysctl.d/60-glueops-nfs.conf.
+#
+# None of these weaken write durability. `sync` exports and filesystem journal
+# ordering are untouched, so the server still refuses to acknowledge a stable
+# write until it is on disk. What changes is how much data can be in flight and
+# how early the kernel starts writing back.
+#
+# Set to {} to skip sysctl tuning entirely.
+nfs_sysctl_settings:
+  # Socket buffers. NFSv4.2 clients negotiate 1 MiB rsize/wsize, but the stock
+  # ~208 KiB cap means the sender stalls waiting for ACKs on anything past a
+  # sub-millisecond RTT -- so large reads and writes never reach line rate.
+  net.core.rmem_max: 16777216
+  net.core.wmem_max: 16777216
+  net.ipv4.tcp_rmem: "4096 262144 16777216"
+  net.ipv4.tcp_wmem: "4096 262144 16777216"
+
+  # Absorb bursts instead of dropping them. A dropped SYN costs the client a
+  # one-second retransmit and a dropped segment costs an RTO; both surface as
+  # "NFS froze for a moment" rather than as a packet loss counter.
+  net.core.netdev_max_backlog: 16384
+  net.core.somaxconn: 8192
+
+  # NFS mounts are long-lived and bursty. By default the kernel collapses the
+  # congestion window back to slow-start after every idle gap, so the first
+  # writes after a quiet period crawl until the window reopens.
+  net.ipv4.tcp_slow_start_after_idle: 0
+
+  # Overlay networks between client and server (Tailscale, CNI encapsulation)
+  # can black-hole PMTU discovery. Probing recovers the path MTU instead of
+  # hanging on large writes.
+  net.ipv4.tcp_mtu_probing: 1
+
+  # Deliberately absent: net.netfilter.nf_conntrack_max. Its default (262144)
+  # already scales with RAM, so a fixed value here is a no-op on a small host
+  # and a *downgrade* on a large one. Conntrack exhaustion is a Kubernetes-node
+  # problem (many short-lived connections), not an NFS-server one -- a client
+  # node holds only a handful of long-lived TCP connections to this host.
+
+  # Writeback. NFSv4 clients send UNSTABLE writes and then COMMIT, so dirty
+  # pages do accumulate between the two. Starting background writeback at 5%
+  # instead of 10% means COMMIT flushes a small backlog rather than a
+  # multi-gigabyte one, which is what turns into multi-second client stalls.
+  vm.dirty_background_ratio: 5
+  vm.dirty_ratio: 15
+
+  # Keep caches resident. Metadata ops (LOOKUP, GETATTR, ACCESS) dominate most
+  # NFS workloads and are either a dentry-cache hit or a disk seek.
+  vm.swappiness: 10
+  vm.vfs_cache_pressure: 50
 
 # Extra packages to install
 nfs_extra_packages:

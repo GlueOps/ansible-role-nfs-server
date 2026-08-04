@@ -7,6 +7,12 @@
   ansible.builtin.import_tasks: nfs.yml
   tags: nfs
 
+- name: Kernel and resource tuning
+  ansible.builtin.import_tasks: tuning.yml
+  tags:
+    - nfs
+    - tuning
+
 - name: System updates
   ansible.builtin.import_tasks: updates.yml
   tags:

@@ -62,12 +62,20 @@
     - nfs-mountd
     - rpcbind
 
+# soft:hard, deliberately. A bare `LimitNOFILE=N` sets BOTH, and raising the
+# *soft* limit is the part with failure modes: fd numbers >= FD_SETSIZE (1024)
+# become reachable, which is undefined behaviour in any program still using
+# select(). rpc.mountd does use select() -- and guards itself by calling
+# setrlimit() to force its own soft limit back to 1024 at startup (verified:
+# started with 524288, reports 1024, uses ~15 fds). rpcbind polls via libtirpc
+# and uses ~9. So neither daemon needs a raised soft limit, and this is the
+# ceiling only. See the README: this is not a throughput knob.
 - name: Deploy systemd LimitNOFILE overrides
   ansible.builtin.copy:
     dest: "/etc/systemd/system/{{ item }}.service.d/override.conf"
     content: |
       [Service]
-      LimitNOFILE={{ nfs_ulimit_nofile }}
+      LimitNOFILE=1024:{{ nfs_ulimit_nofile }}
     owner: root
     group: root
     mode: "0644"

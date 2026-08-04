@@ -1,0 +1,63 @@
+---
+# fs.nr_open is the kernel's hard ceiling on any process's RLIMIT_NOFILE. PAM
+# cannot raise a session above it, so an out-of-range value here means sshd
+# fails to open new sessions -- locking you out of the host it just tuned.
+# Read it rather than hardcoding: the historical default is 1048576, but
+# systemd raises it to 1073741816 at boot on 24.04, and a hardcoded bound would
+# reject values this host accepts fine.
+- name: Read the fs.nr_open ceiling
+  ansible.builtin.slurp:
+    src: /proc/sys/fs/nr_open
+  register: nfs_nr_open
+
+- name: Validate nofile limit against the fs.nr_open ceiling
+  ansible.builtin.assert:
+    that:
+      - nfs_ulimit_nofile | int > 0
+      - nfs_ulimit_nofile | int <= (nfs_nr_open.content | b64decode | trim | int)
+    fail_msg: >-
+      nfs_ulimit_nofile is {{ nfs_ulimit_nofile }}, above this host's
+      fs.nr_open ceiling of {{ nfs_nr_open.content | b64decode | trim }}.
+      Above that ceiling PAM refuses to open new login sessions and SSH access
+      to this host is lost.
+    quiet: true
+
+- name: Deploy kernel tuning sysctls
+  ansible.builtin.template:
+    src: sysctl.conf.j2
+    dest: /etc/sysctl.d/60-glueops-nfs.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: nfs_sysctl_settings | length > 0
+  notify: reload sysctl
+
+- name: Remove kernel tuning sysctls when disabled
+  ansible.builtin.file:
+    path: /etc/sysctl.d/60-glueops-nfs.conf
+    state: absent
+  when: nfs_sysctl_settings | length == 0
+  notify: reload sysctl
+
+# PAM sessions only -- SSH logins, su, cron. Not the NFS daemons: nfsd is
+# kernel threads with no fd limit at all, and nfs-mountd/rpcbind take theirs
+# from the systemd overrides in nfs.yml (systemd ignores limits.conf entirely).
+#
+# Raises the hard ceiling only, leaving soft at the 1024 default, for the same
+# reason as the systemd override: a raised soft limit is what exposes select()
+# users to fd numbers past FD_SETSIZE, and nothing here needs it unasked. An
+# operator who genuinely needs more raises it per-shell with `ulimit -n`, which
+# is exactly what a hard limit above soft is for.
+- name: Deploy nofile limits for login sessions
+  ansible.builtin.copy:
+    dest: /etc/security/limits.d/60-glueops-nfs.conf
+    content: |
+      # Managed by Ansible -- do not edit
+      # Hard ceiling only; soft stays at the default. Raise per-shell with
+      # `ulimit -n <N>` up to this ceiling when a job actually needs it.
+      # "*" does not match root in limits.conf, hence the explicit root line.
+      *     hard  nofile  {{ nfs_ulimit_nofile }}
+      root  hard  nofile  {{ nfs_ulimit_nofile }}
+    owner: root
+    group: root
+    mode: "0644"
