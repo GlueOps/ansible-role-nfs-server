@@ -8,7 +8,6 @@
     cache_valid_time: 3600
   when: nfs_extra_packages | length > 0
 
-# Unattended upgrades
 - name: Disable unattended upgrades
   ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/99-glueops-unattended-upgrades

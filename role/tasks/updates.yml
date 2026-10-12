@@ -7,8 +7,6 @@
   ansible.builtin.apt:
     upgrade: dist
 
-# Package upgrades can restart nfs-server, which can leave new mounts failing
-# with "Stale file handle"
 - name: Flush NFS export cache
   ansible.builtin.command:
     cmd: exportfs -f
