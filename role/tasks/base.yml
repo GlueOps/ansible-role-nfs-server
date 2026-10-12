@@ -18,20 +18,12 @@
     owner: root
     group: root
     mode: "0644"
-  when: not nfs_unattended_upgrades | bool
-
-- name: Remove unattended upgrades override
-  ansible.builtin.file:
-    path: /etc/apt/apt.conf.d/99-glueops-unattended-upgrades
-    state: absent
-  when: nfs_unattended_upgrades | bool
 
 - name: Read effective unattended-upgrade setting
   ansible.builtin.command:
     cmd: apt-config shell NFS_UU APT::Periodic::Unattended-Upgrade
   changed_when: false
   register: nfs_apt_uu_effective
-  when: not nfs_unattended_upgrades | bool
 
 - name: Assert unattended upgrades are disabled
   ansible.builtin.assert:
@@ -43,7 +35,6 @@
       /etc/apt/apt.conf.d/ that sorts after 99-glueops-unattended-upgrades is
       overriding it.
     quiet: true
-  when: not nfs_unattended_upgrades | bool
 
 # Firewall
 - name: Install ufw

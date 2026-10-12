@@ -101,7 +101,6 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 | `nfs_allowed_subnets` | `["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]` | Subnets allowed through the firewall |
 | `nfs_ulimit_nofile` | `524288` | `LimitNOFILE` for nfs-mountd and rpcbind, and the `nofile` limit for login sessions |
 | `nfs_sysctl_settings` | See `defaults/main.yml` | Kernel tuning written to `/etc/sysctl.d/60-glueops-nfs.conf`. Set to `{}` to disable |
-| `nfs_unattended_upgrades` | `false` | Allow unattended-upgrades to install packages automatically |
 | `nfs_extra_packages` | `[tmux, curl, htop]` | Additional packages to install |
 
 ### Export format

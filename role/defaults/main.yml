@@ -107,9 +107,6 @@ nfs_sysctl_settings:
   vm.swappiness: 10
   vm.vfs_cache_pressure: 50
 
-# Allow unattended-upgrades to install packages automatically
-nfs_unattended_upgrades: false
-
 # Extra packages to install
 nfs_extra_packages:
   - tmux
