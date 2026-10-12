@@ -26,6 +26,8 @@
     systemctl stop nfs-server || true
     systemctl start nfs-server
     systemctl try-restart nfs-mountd
+    # A restart can leave new mounts failing with "Stale file handle"
+    exportfs -f
   changed_when: false
 
 - name: reload sysctl

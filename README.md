@@ -80,7 +80,7 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 | `nfs` | Install nfs-kernel-server, deploy the nfs.conf drop-in, exports, systemd overrides, kernel tuning, start services |
 | `tuning` | Kernel sysctls and nofile limits only (a subset of `nfs`) |
 | `base` | Disable unattended upgrades, install extra packages, configure ufw (firewall), SSH hardening, lock root password |
-| `updates` | `apt update && apt dist-upgrade`, reports if reboot is needed. Skipped by default. |
+| `updates` | `apt update && apt dist-upgrade`, flushes the NFS export cache, verifies a new mount works, reports if reboot is needed. Skipped by default. |
 
 ### Override variables
 
