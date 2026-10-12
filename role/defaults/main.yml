@@ -107,15 +107,7 @@ nfs_sysctl_settings:
   vm.swappiness: 10
   vm.vfs_cache_pressure: 50
 
-# Whether Ubuntu's unattended-upgrades may install packages on its own.
-#
-# Off by default. An unattended upgrade of an NFS-related package restarts
-# nfs-server on whatever day the timer fires, and a restart can leave the
-# server refusing every NEW mount with "Stale file handle" while existing
-# mounts keep working -- so nothing alerts until a pod reschedules. Patch via
-# `--tags updates` in a maintenance window instead. Package lists are still
-# refreshed daily, so pending updates remain visible. See
-# .ai/design-decisions.md.
+# Allow unattended-upgrades to install packages automatically
 nfs_unattended_upgrades: false
 
 # Extra packages to install

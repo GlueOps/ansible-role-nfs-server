@@ -9,12 +9,6 @@
   when: nfs_extra_packages | length > 0
 
 # Unattended upgrades
-#
-# Ubuntu enables these via /etc/apt/apt.conf.d/20auto-upgrades, which is owned
-# by debconf (dpkg-reconfigure rewrites it). Rather than editing that file, a
-# drop-in that sorts after it overrides the one key: apt reads apt.conf.d in
-# lexical order and the last assignment wins. Update-Package-Lists is left
-# alone so pending updates stay visible.
 - name: Disable unattended upgrades
   ansible.builtin.copy:
     dest: /etc/apt/apt.conf.d/99-glueops-unattended-upgrades
@@ -32,8 +26,6 @@
     state: absent
   when: nfs_unattended_upgrades | bool
 
-# Same reasoning as the sshd -T check below: prove the effective value, so a
-# later-sorting drop-in that re-enables upgrades fails the run loudly.
 - name: Read effective unattended-upgrade setting
   ansible.builtin.command:
     cmd: apt-config shell NFS_UU APT::Periodic::Unattended-Upgrade
