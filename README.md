@@ -68,7 +68,7 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 # Only NFS config
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags nfs
 
-# Only base setup (firewall, SSH, extra packages)
+# Only base setup (unattended upgrades, firewall, SSH, extra packages)
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags base
 
 # Update and upgrade all packages (must be explicitly requested)
@@ -79,7 +79,7 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 |---|---|
 | `nfs` | Install nfs-kernel-server, deploy the nfs.conf drop-in, exports, systemd overrides, kernel tuning, start services |
 | `tuning` | Kernel sysctls and nofile limits only (a subset of `nfs`) |
-| `base` | Install extra packages, configure ufw (firewall), SSH hardening, lock root password |
+| `base` | Disable unattended upgrades, install extra packages, configure ufw (firewall), SSH hardening, lock root password |
 | `updates` | `apt update && apt dist-upgrade`, reports if reboot is needed. Skipped by default. |
 
 ### Override variables
@@ -101,6 +101,7 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 | `nfs_allowed_subnets` | `["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]` | Subnets allowed through the firewall |
 | `nfs_ulimit_nofile` | `524288` | `LimitNOFILE` for nfs-mountd and rpcbind, and the `nofile` limit for login sessions |
 | `nfs_sysctl_settings` | See `defaults/main.yml` | Kernel tuning written to `/etc/sysctl.d/60-glueops-nfs.conf`. Set to `{}` to disable |
+| `nfs_unattended_upgrades` | `false` | Allow Ubuntu's unattended-upgrades to install packages automatically. Off by default; patch with `--tags updates` instead |
 | `nfs_extra_packages` | `[tmux, curl, htop]` | Additional packages to install |
 
 ### Export format
