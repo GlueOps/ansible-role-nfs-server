@@ -26,6 +26,7 @@
     systemctl stop nfs-server || true
     systemctl start nfs-server
     systemctl try-restart nfs-mountd
+    exportfs -f
   changed_when: false
 
 - name: reload sysctl

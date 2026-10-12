@@ -68,7 +68,7 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 # Only NFS config
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags nfs
 
-# Only base setup (firewall, SSH, extra packages)
+# Only base setup (unattended upgrades, firewall, SSH, extra packages)
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x.x.x," -u root --tags base
 
 # Update and upgrade all packages (must be explicitly requested)
@@ -79,8 +79,8 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 |---|---|
 | `nfs` | Install nfs-kernel-server, deploy the nfs.conf drop-in, exports, systemd overrides, kernel tuning, start services |
 | `tuning` | Kernel sysctls and nofile limits only (a subset of `nfs`) |
-| `base` | Install extra packages, configure ufw (firewall), SSH hardening, lock root password |
-| `updates` | `apt update && apt dist-upgrade`, reports if reboot is needed. Skipped by default. |
+| `base` | Disable unattended upgrades, install extra packages, configure ufw (firewall), SSH hardening, lock root password |
+| `updates` | `apt update && apt dist-upgrade`, flushes the NFS export cache, reports if reboot is needed. Skipped by default. |
 
 ### Override variables
 

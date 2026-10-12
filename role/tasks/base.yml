@@ -8,6 +8,16 @@
     cache_valid_time: 3600
   when: nfs_extra_packages | length > 0
 
+- name: Disable unattended upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/99-glueops-unattended-upgrades
+    content: |
+      // Managed by Ansible -- do not edit
+      APT::Periodic::Unattended-Upgrade "0";
+    owner: root
+    group: root
+    mode: "0644"
+
 # Firewall
 - name: Install ufw
   ansible.builtin.apt:

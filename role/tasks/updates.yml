@@ -7,6 +7,11 @@
   ansible.builtin.apt:
     upgrade: dist
 
+- name: Flush NFS export cache
+  ansible.builtin.command:
+    cmd: exportfs -f
+  changed_when: false
+
 - name: Check if reboot is required
   ansible.builtin.stat:
     path: /var/run/reboot-required
