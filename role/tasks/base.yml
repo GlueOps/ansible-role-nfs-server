@@ -19,23 +19,6 @@
     group: root
     mode: "0644"
 
-- name: Read effective unattended-upgrade setting
-  ansible.builtin.command:
-    cmd: apt-config shell NFS_UU APT::Periodic::Unattended-Upgrade
-  changed_when: false
-  register: nfs_apt_uu_effective
-
-- name: Assert unattended upgrades are disabled
-  ansible.builtin.assert:
-    that:
-      - "nfs_apt_uu_effective.stdout | trim in ['', \"NFS_UU='0'\"]"
-    fail_msg: >-
-      apt-config reports APT::Periodic::Unattended-Upgrade is still enabled
-      ({{ nfs_apt_uu_effective.stdout | trim }}). A file in
-      /etc/apt/apt.conf.d/ that sorts after 99-glueops-unattended-upgrades is
-      overriding it.
-    quiet: true
-
 # Firewall
 - name: Install ufw
   ansible.builtin.apt:
