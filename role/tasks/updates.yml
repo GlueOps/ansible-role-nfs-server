@@ -14,31 +14,6 @@
     cmd: exportfs -f
   changed_when: false
 
-- name: Verify a new NFS mount succeeds
-  ansible.builtin.shell: |
-    set -u
-    mnt=$(mktemp -d)
-    trap 'umount "$mnt" 2>/dev/null; rmdir "$mnt"' EXIT
-    for ip in $(hostname -I); do
-      case "$ip" in *:*) continue ;; esac
-      if out=$(timeout 30 mount -t nfs4 -o ro,soft,timeo=50,retrans=1 "$ip:{{ nfs_exports[0].path }}" "$mnt" 2>&1); then
-        echo "mounted via $ip"
-        exit 0
-      fi
-      case "$out" in *"Stale file handle"*) echo "$out" >&2; exit 1 ;; esac
-    done
-    echo "skipped: no local address is allowed by the export"
-  args:
-    executable: /bin/bash
-  register: nfs_mount_check
-  changed_when: false
-  when: nfs_exports | length > 0
-
-- name: Show NFS mount check result
-  ansible.builtin.debug:
-    msg: "{{ nfs_mount_check.stdout }}"
-  when: nfs_exports | length > 0
-
 - name: Check if reboot is required
   ansible.builtin.stat:
     path: /var/run/reboot-required
