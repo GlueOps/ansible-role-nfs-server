@@ -20,14 +20,14 @@ Ansible role to configure an NFS v4.2 server on Ubuntu 24.04 LTS.
 ### Pull the container
 
 ```bash
-docker pull ghcr.io/glueops/ansible-role-nfs-server:latest
+docker pull ghcr.io/glueops/ansible-role-nfs-server:v0.0.5 # x-release-please-version
 ```
 
 ### Run the container
 
 ```bash
 docker run --rm -it --cap-add=NET_ADMIN --device=/dev/net/tun \
-  ghcr.io/glueops/ansible-role-nfs-server:latest
+  ghcr.io/glueops/ansible-role-nfs-server:v0.0.5 # x-release-please-version
 ```
 
 This drops you into a shell with Ansible, Tailscale, and the role ready to go.
@@ -51,7 +51,7 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "100.x
 # Mount your key when starting the container:
 docker run --rm -it \
   -v ~/.ssh/id_rsa:/root/.ssh/id_rsa:ro \
-  ghcr.io/glueops/ansible-role-nfs-server:latest
+  ghcr.io/glueops/ansible-role-nfs-server:v0.0.5 # x-release-please-version
 
 # Inside the container:
 ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook /ansible/playbook.yml -i "10.0.50.10," -u root --private-key=/root/.ssh/id_rsa
