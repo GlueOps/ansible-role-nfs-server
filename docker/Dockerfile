@@ -1,5 +1,5 @@
 # Stage 1: Lint and validate
-FROM python:3.14.5-slim@sha256:c845af9399020c7e562969a13689e929074a10fd057acd1b1fad06a2fb068e97 AS lint
+FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS lint
 
 COPY docker/requirements.txt /tmp/requirements.txt
 COPY docker/requirements-lint.txt /tmp/requirements-lint.txt
@@ -21,7 +21,7 @@ RUN ansible-playbook playbook.yml --syntax-check
 RUN touch /lint-passed
 
 # Stage 2: Runtime image
-FROM python:3.14.5-slim@sha256:c845af9399020c7e562969a13689e929074a10fd057acd1b1fad06a2fb068e97
+FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 
 COPY --from=lint /lint-passed /tmp/.lint-passed
 
